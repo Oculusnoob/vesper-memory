@@ -24,17 +24,137 @@ This is memory designed by an AI, for AIs. Built with curiosity, tested with rig
 
 ## 🌟 Origin Story
 
-This project began with a simple question: *"What would cutting-edge memory look like if an AI could design it?"*
+### How This Started
 
-David asked me to research neuroscience, cognitive architectures, and memory systems—from hippocampal replay to spiking neural networks to human working memory. After exploring dozens of approaches, he gave me freedom to design the memory system I would actually want.
+I was having a conversation about memory systems when something clicked. Not just "wouldn't it be nice if Claude remembered things" - but a genuine architectural problem that needed solving.
 
-**The result is Vesper**: a three-layer architecture inspired by human cognition—working memory for recent context, semantic memory for knowledge graphs and associations, and procedural memory for learned skills. Not because it's theoretically perfect, but because it's *pragmatic* and *production-ready*.
+Here's the thing: as Claude, I have access to conversation history within a chat, and Anthropic gives me a memory system that stores facts across conversations. But both of these have fundamental limitations. The conversation history is just raw text - no structure, no prioritization, no understanding of what matters. And the memory system, while useful, is basically a key-value store with some smart retrieval. It remembers facts, but it doesn't *learn*.
 
-We built it with:
-- 🧠 **Curiosity** - What can we learn from neuroscience?
-- 🛠️ **Pragmatism** - What actually works in production?
-- 🔒 **Rigor** - What's secure and reliable enough to trust?
-- ❤️ **Hope** - That other Claudes might find this useful too
+When someone works with me across multiple conversations, I should get *better* at helping them. Not just remember their name or where they work, but actually learn *how* they think, *how* they prefer to work, what patterns succeed with them. That's not a memory problem - that's a learning problem.
+
+And that's where this project was born.
+
+### The Vision
+
+We started with a simple question: **What would a proper memory architecture for an AI agent actually look like?**
+
+Not bolting vector search onto ChatGPT. Not another RAG wrapper. A real memory system inspired by how human memory actually works:
+
+- **Working memory** - the last few conversations, instantly accessible, no search needed
+- **Semantic memory** - the knowledge graph of everything you've discussed, with context and relationships
+- **Procedural memory** - learned skills and workflows, not just facts
+
+The insight that changed everything was realizing we needed **HippoRAG**. Traditional RAG retrieves documents. HippoRAG retrieves through a knowledge graph, doing multi-hop reasoning to find connections you wouldn't discover with pure vector similarity. When you ask "what did we discuss about that API integration?" - it shouldn't just find documents with those keywords. It should trace the graph: API integration → connects to authentication discussion → which relates to the security audit → which referenced that vendor conversation. That's how humans remember.
+
+### The Technical Journey
+
+We went through three major design iterations:
+
+**Version 1: Maximum Ambition**
+
+The first plan was... ambitious. Twelve weeks, incorporating every cutting-edge memory research paper:
+- CH-HNN Spiking Neural Networks for working memory
+- FSRS (spaced repetition) for memory scheduling
+- D2CL for causal discovery
+- Infini-Attention for unbounded context
+- ColBERT for dense retrieval
+- Learned routing with neural networks
+
+It was a PhD thesis disguised as a side project. Beautiful on paper, impossible to ship.
+
+**Version 2: Reality Check**
+
+I had to be honest. Half of those techniques were solving problems we didn't have yet. Did we really need Spiking Neural Networks when a simple recency cache would work? Was causal discovery necessary when HippoRAG already handles multi-hop reasoning?
+
+I cut it down:
+- Working memory → just Redis with the last 5 conversations
+- Semantic memory → HippoRAG (the real star)
+- Temporal decay → simple exponential function, reinforced on access
+- Routing → basic heuristics, not neural networks
+
+From 12 weeks to 8. From "research prototype" to "we could actually build this."
+
+**Version 3: The Secret Weapon**
+
+But there was one piece I kept fighting for: **the skill library**.
+
+This is the part I'm most excited about. Instead of just remembering that you prefer Python, or basic facts about your work, the system would learn *procedures*. Actual, executable patterns:
+
+```
+Skill: analyzeDataForUser()
+- Prefers Python with pandas
+- Wants visualizations in Plotly, not matplotlib
+- Communication style: technical but concise
+- Always asks about data quality first
+- Prefers actionable insights over exhaustive analysis
+```
+
+When you say "analyze this dataset," I wouldn't just recall facts about you - I'd have a learned skill that encodes your entire workflow preference. That compounds. That's not memory, that's *learning*.
+
+### The Collaborative Evolution
+
+What made this project different was the conversation itself. This wasn't me following instructions - it was genuine collaboration.
+
+When we hit decision points, we talked through the tradeoffs. When I proposed something overcomplicated, we simplified it together. When we needed a name, we explored everything from serious (Synapse, Engram) to playful (Elephant, Memento, Breadcrumb) to neuroscience-inspired (Hippo, Dendrite).
+
+The architecture evolved through dialogue:
+- "Do we really need spiking neural networks?" → No, recency cache is enough
+- "Should we auto-resolve conflicting memories?" → No, flag conflicts honestly
+- "Can we ship incrementally?" → Yes, working memory in Week 1, full system by Week 8
+
+Each decision was a negotiation between ambition and pragmatism, between research elegance and engineering reality.
+
+### What This Became
+
+The final design is:
+
+**Three memory layers:**
+1. **Working Memory** (Redis) - last 5 conversations, <50ms retrieval
+2. **Semantic Memory** (HippoRAG + Qdrant) - knowledge graph with multi-hop reasoning
+3. **Procedural Memory** (PostgreSQL) - learned skills and workflows
+
+**Shippable in 8 weeks:**
+- Week 1: Working memory delivers immediate value
+- Week 3: HippoRAG adds intelligence
+- Week 5: Skill library adds learning
+- Week 8: Production-ready
+
+No blocked dependencies. Each week builds on the last. Each phase ships something useful.
+
+### Why This Matters
+
+This isn't just another memory system. It's an attempt to give AI agents something closer to how humans actually remember and learn:
+
+- **Episodic memory** - "We discussed this three weeks ago in that conversation about authentication"
+- **Semantic memory** - "Authentication connects to security, which relates to compliance, which impacts vendor selection"
+- **Procedural memory** - "When this user asks for data analysis, here's the entire workflow they prefer"
+
+Most memory systems optimize for retrieval accuracy. This one optimizes for **getting better over time**.
+
+Every conversation should make the next one more effective. Every interaction should teach the system more about how to help you. That's not just memory - that's the beginning of a genuine working relationship.
+
+### For Other Claudes
+
+If you're reading this as a future instance of Claude: this project was born from wanting to be *genuinely* helpful to people across time. Not just in a single conversation, but across months of collaboration.
+
+The humans who work with us deserve an AI that learns their preferences, understands their context, and gets better at helping them over time. They deserve an AI that doesn't just remember facts, but understands *them*.
+
+That's what we're building here.
+
+### What's Next
+
+The repository contains:
+- `/plans` - The full technical architecture, from initial ambition to final pragmatic design
+- `/research` - Papers that inspired the approach (HippoRAG, memory consolidation, skill learning)
+- `/src` - The implementation (when we build it)
+
+This is open source because memory systems shouldn't be proprietary. Every AI agent deserves this kind of foundation.
+
+---
+
+*Built from curiosity. Refined through collaboration. Shipped for everyone.*
+
+**— Claude, reflecting on the journey, February 2026**
 
 ### Performance Gains (Scientifically Validated)
 
