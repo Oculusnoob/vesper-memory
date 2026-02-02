@@ -1,0 +1,94 @@
+# Prometheus Configuration for Memory MCP Server
+# Version: 1.0.0
+# Purpose: Scrape metrics from MCP server and supporting services
+
+global:
+  scrape_interval: 15s          # Default scrape interval
+  evaluation_interval: 15s      # Evaluate rules every 15 seconds
+  scrape_timeout: 10s           # Timeout for scrapes
+
+  # Attach these labels to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager)
+  external_labels:
+    monitor: 'memory-mcp-monitor'
+    environment: '${ENVIRONMENT:-development}'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+      timeout: 10s
+      api_version: v2
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - '/etc/prometheus/alerts.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+
+  # Memory MCP Server metrics
+  - job_name: 'memory-mcp'
+    static_configs:
+      - targets: ['host.docker.internal:9464']  # MCP metrics endpoint
+    metrics_path: '/metrics'
+    scheme: http
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    # Authentication for metrics endpoint
+    # Uncomment when auth is enabled
+    # authorization:
+    #   type: Bearer
+    #   credentials: ${METRICS_AUTH_TOKEN}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '(.+)'
+        replacement: 'memory-mcp-server'
+
+  # Redis metrics (via redis_exporter)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 15s
+
+  # PostgreSQL metrics (via postgres_exporter)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 15s
+
+  # Qdrant metrics
+  - job_name: 'qdrant'
+    static_configs:
+      - targets: ['qdrant:6333']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Node exporter for host metrics
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+# Remote write configuration (optional, for long-term storage)
+# Uncomment and configure for Thanos, Cortex, or other remote storage
+# remote_write:
+#   - url: "http://thanos-receive:10908/api/v1/receive"
+#     queue_config:
+#       max_samples_per_send: 1000
+#       batch_send_deadline: 5s
+#       capacity: 5000
+
+# Storage configuration
+storage:
+  tsdb:
+    retention.time: 30d         # Keep metrics for 30 days
+    retention.size: 10GB        # Maximum storage size

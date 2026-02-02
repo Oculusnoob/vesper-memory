@@ -1,0 +1,188 @@
+# AlertManager Configuration for Memory MCP Server
+# Version: 1.0.0
+#
+# Alert Channels:
+#   - PagerDuty: Critical alerts (24/7 on-call)
+#   - Slack: High/Medium alerts (team channel)
+#   - Email: All alerts (audit trail)
+
+global:
+  # SMTP configuration for email alerts
+  smtp_smarthost: '${SMTP_HOST:-smtp.gmail.com}:587'
+  smtp_from: '${SMTP_FROM:-alertmanager@example.com}'
+  smtp_auth_username: '${SMTP_USERNAME}'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+  smtp_require_tls: true
+
+  # Slack configuration
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+
+  # PagerDuty configuration
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+  # Default resolve timeout
+  resolve_timeout: 5m
+
+# Templates for alert formatting
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route tree - determines how alerts are routed to receivers
+route:
+  # Default receiver
+  receiver: 'email-audit'
+
+  # Group alerts by these labels
+  group_by: ['alertname', 'severity', 'team']
+
+  # How long to wait before sending a notification about new alerts
+  group_wait: 30s
+
+  # How long to wait before sending notification about new alerts in a group
+  group_interval: 5m
+
+  # How long to wait before resending a notification
+  repeat_interval: 4h
+
+  # Child routes (more specific routes take precedence)
+  routes:
+    # Critical alerts go to PagerDuty
+    - match:
+        severity: critical
+      receiver: 'pagerduty-critical'
+      continue: true  # Also send to other matching routes
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # Security team alerts
+    - match:
+        team: security
+      receiver: 'slack-security'
+      continue: true
+
+    # Warning alerts go to Slack
+    - match:
+        severity: warning
+      receiver: 'slack-platform'
+      continue: true
+
+    # All alerts go to email for audit
+    - match_re:
+        severity: .*
+      receiver: 'email-audit'
+
+# Inhibition rules - suppress certain alerts when others are firing
+inhibit_rules:
+  # If MCP server is down, suppress all other MCP alerts
+  - source_match:
+      alertname: 'MCPServerDown'
+    target_match_re:
+      alertname: 'High.*'
+    equal: ['team']
+
+  # If Redis is down, suppress rate limiting alerts
+  - source_match:
+      alertname: 'RedisDown'
+    target_match:
+      alertname: 'ExcessiveRateLimiting'
+
+  # If certificate is expired, suppress expiring soon alerts
+  - source_match:
+      alertname: 'CertificateExpired'
+    target_match:
+      alertname: 'CertificateExpiringSoon'
+
+  - source_match:
+      alertname: 'CertificateExpired'
+    target_match:
+      alertname: 'CertificateExpiringCritical'
+
+# Receiver definitions
+receivers:
+  # PagerDuty for critical 24/7 alerts
+  - name: 'pagerduty-critical'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY}'
+        severity: critical
+        description: '{{ .CommonAnnotations.summary }}'
+        details:
+          alertname: '{{ .CommonLabels.alertname }}'
+          description: '{{ .CommonAnnotations.description }}'
+          runbook: '{{ .CommonAnnotations.runbook_url }}'
+          impact: '{{ .CommonAnnotations.impact }}'
+
+  # Slack for security alerts
+  - name: 'slack-security'
+    slack_configs:
+      - api_url: '${SLACK_SECURITY_WEBHOOK_URL}'
+        channel: '#security-alerts'
+        username: 'AlertManager'
+        icon_emoji: ':shield:'
+        title: '[{{ .Status | toUpper }}] {{ .CommonAnnotations.summary }}'
+        text: |
+          *Alert:* {{ .CommonLabels.alertname }}
+          *Severity:* {{ .CommonLabels.severity }}
+          *Description:* {{ .CommonAnnotations.description }}
+          *Impact:* {{ .CommonAnnotations.impact }}
+          *Runbook:* {{ .CommonAnnotations.runbook_url }}
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        send_resolved: true
+
+  # Slack for platform alerts
+  - name: 'slack-platform'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#platform-alerts'
+        username: 'AlertManager'
+        icon_emoji: ':bell:'
+        title: '[{{ .Status | toUpper }}{{ if eq .Status "firing" }} - {{ .CommonLabels.severity | toUpper }}{{ end }}] {{ .CommonAnnotations.summary }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Description:* {{ .Annotations.description }}
+          {{ if .Annotations.runbook_url }}*Runbook:* {{ .Annotations.runbook_url }}{{ end }}
+          {{ end }}
+        color: '{{ if eq .Status "firing" }}{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}{{ else }}good{{ end }}'
+        send_resolved: true
+
+  # Email for audit trail (all alerts)
+  - name: 'email-audit'
+    email_configs:
+      - to: '${ALERT_EMAIL_TO:-security-audit@example.com}'
+        from: '${SMTP_FROM:-alertmanager@example.com}'
+        smarthost: '${SMTP_HOST:-smtp.gmail.com}:587'
+        auth_username: '${SMTP_USERNAME}'
+        auth_password: '${SMTP_PASSWORD}'
+        require_tls: true
+        headers:
+          Subject: '[{{ .Status | toUpper }}] Memory MCP Alert: {{ .CommonAnnotations.summary }}'
+        html: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; }
+              .alert { padding: 10px; margin: 10px 0; border-radius: 4px; }
+              .critical { background-color: #f8d7da; border: 1px solid #f5c6cb; }
+              .warning { background-color: #fff3cd; border: 1px solid #ffeeba; }
+              .resolved { background-color: #d4edda; border: 1px solid #c3e6cb; }
+            </style>
+          </head>
+          <body>
+            <h2>Memory MCP Alert</h2>
+            {{ range .Alerts }}
+            <div class="alert {{ .Labels.severity }}">
+              <h3>{{ .Labels.alertname }}</h3>
+              <p><strong>Status:</strong> {{ .Status }}</p>
+              <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
+              <p><strong>Summary:</strong> {{ .Annotations.summary }}</p>
+              <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+              {{ if .Annotations.impact }}<p><strong>Impact:</strong> {{ .Annotations.impact }}</p>{{ end }}
+              {{ if .Annotations.runbook_url }}<p><strong>Runbook:</strong> <a href="{{ .Annotations.runbook_url }}">{{ .Annotations.runbook_url }}</a></p>{{ end }}
+              <p><strong>Started:</strong> {{ .StartsAt }}</p>
+              {{ if .EndsAt }}<p><strong>Ended:</strong> {{ .EndsAt }}</p>{{ end }}
+            </div>
+            {{ end }}
+          </body>
+          </html>
+        send_resolved: true
