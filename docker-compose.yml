@@ -1,60 +1,16 @@
 services:
-  # Nginx Reverse Proxy with TLS Termination
-  # Provides HTTPS, security headers, and rate limiting
-  nginx:
-    image: nginx:1.25-alpine
-    container_name: vesper-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./config/ssl:/etc/nginx/ssl:ro
-      - ./config/ssl/letsencrypt:/etc/letsencrypt:ro
-      - ./config/ssl/certbot-webroot:/var/www/certbot:ro
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      - qdrant
-      - embedding
-    restart: unless-stopped
-    networks:
-      - vesper-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
-  # Certbot for Let's Encrypt certificate auto-renewal
-  # Checks for renewal every 12 hours
-  certbot:
-    image: certbot/certbot:latest
-    container_name: vesper-certbot
-    volumes:
-      - ./config/ssl/letsencrypt:/etc/letsencrypt
-      - ./config/ssl/certbot-webroot:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done;'"
-    restart: unless-stopped
-    networks:
-      - vesper-network
-
-  # Vector Database for embeddings and hybrid search
+  # Vector Database for embeddings and semantic search
   qdrant:
     image: qdrant/qdrant:v1.7.4
     container_name: vesper-qdrant
     ports:
-      - "${QDRANT_PORT:-6333}:6333"
+      - "6333:6333"
     volumes:
       - qdrant_storage:/qdrant/storage
-    environment:
-      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY must be set in .env file}
     restart: unless-stopped
     networks:
       - vesper-network
     healthcheck:
-      # Use bash /dev/tcp for health check (Qdrant Debian image lacks curl/wget)
-      # Tests TCP connectivity and sends HTTP request to /healthz endpoint
       test: ["CMD-SHELL", "bash -c 'echo -e \"GET /healthz HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n\" > /dev/tcp/localhost/6333'"]
       interval: 10s
       timeout: 5s
@@ -66,38 +22,15 @@ services:
     image: redis:7-alpine
     container_name: vesper-redis
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "6379:6379"
     volumes:
       - redis_storage:/data
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env file}
+    command: redis-server --appendonly yes
     restart: unless-stopped
     networks:
       - vesper-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-  # Metadata store and graph relationships
-  postgres:
-    image: postgres:16-alpine
-    container_name: vesper-postgres
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-memory}
-      POSTGRES_USER: ${POSTGRES_USER:-memory_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env file}
-    volumes:
-      - postgres_storage:/var/lib/postgresql/data
-      - ./config/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql
-    restart: unless-stopped
-    networks:
-      - vesper-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-memory_user} -d ${POSTGRES_DB:-memory}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -110,7 +43,7 @@ services:
       dockerfile: Dockerfile
     container_name: vesper-embedding
     ports:
-      - "${EMBEDDING_PORT:-8000}:8000"
+      - "8000:8000"
     restart: unless-stopped
     networks:
       - vesper-network
@@ -121,137 +54,6 @@ services:
       retries: 3
       start_period: 60s
 
-  # ============================================================================
-  # Monitoring Stack (Prometheus + Grafana + AlertManager)
-  # ============================================================================
-
-  # Prometheus - Metrics collection and alerting rules
-  prometheus:
-    image: prom/prometheus:v2.48.0
-    container_name: vesper-prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./config/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
-      - '--storage.tsdb.retention.size=10GB'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--web.enable-lifecycle'
-    restart: unless-stopped
-    networks:
-      - vesper-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  # Grafana - Metrics visualization and dashboards
-  grafana:
-    image: grafana/grafana:10.2.2
-    container_name: vesper-grafana
-    ports:
-      - "3000:3000"
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3000}
-      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources:ro
-    depends_on:
-      - prometheus
-    restart: unless-stopped
-    networks:
-      - vesper-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  # AlertManager - Alert routing and notification
-  alertmanager:
-    image: prom/alertmanager:v0.26.0
-    container_name: vesper-alertmanager
-    ports:
-      - "9093:9093"
-    volumes:
-      - ./config/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - alertmanager_data:/alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-      - '--web.external-url=http://localhost:9093'
-    restart: unless-stopped
-    networks:
-      - vesper-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
-  # Node Exporter - Host metrics (CPU, memory, disk)
-  node-exporter:
-    image: prom/node-exporter:v1.7.0
-    container_name: vesper-node-exporter
-    ports:
-      - "9100:9100"
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--path.rootfs=/rootfs'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    restart: unless-stopped
-    networks:
-      - vesper-network
-
-  # Redis Exporter - Redis metrics for Prometheus
-  redis-exporter:
-    image: oliver006/redis_exporter:v1.55.0
-    container_name: vesper-redis-exporter
-    ports:
-      - "9121:9121"
-    environment:
-      REDIS_ADDR: redis:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-    depends_on:
-      - redis
-    restart: unless-stopped
-    networks:
-      - vesper-network
-
-  # PostgreSQL Exporter - PostgreSQL metrics for Prometheus
-  postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:v0.15.0
-    container_name: vesper-postgres-exporter
-    ports:
-      - "9187:9187"
-    environment:
-      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-memory_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-memory}?sslmode=disable"
-    depends_on:
-      - postgres
-    restart: unless-stopped
-    networks:
-      - vesper-network
-
 networks:
   vesper-network:
     driver: bridge
@@ -260,14 +62,4 @@ volumes:
   qdrant_storage:
     driver: local
   redis_storage:
-    driver: local
-  postgres_storage:
-    driver: local
-  nginx_logs:
-    driver: local
-  prometheus_data:
-    driver: local
-  grafana_data:
-    driver: local
-  alertmanager_data:
     driver: local

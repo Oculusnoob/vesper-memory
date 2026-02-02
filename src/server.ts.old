@@ -1,8 +1,8 @@
 /**
- * Vesper - AI Memory System (Simplified)
+ * Vesper - AI Memory System
  *
  * Main entry point for the Model Context Protocol server.
- * This is a simplified version with NO authentication, rate limiting, or monitoring.
+ * Implements a neuroscience-inspired memory system for Claude Code agents.
  *
  * This server provides:
  * - store_memory: Add memories to working memory
@@ -31,6 +31,29 @@ import {
 } from "./utils/validation.js";
 import { createEmbeddingClient, EmbeddingClient } from "./embeddings/client.js";
 import { HybridSearchEngine } from "./retrieval/hybrid-search.js";
+import {
+  RateLimitMiddleware,
+  RateLimitError,
+  createRateLimitMiddleware,
+  RateLimitCheckResult,
+} from "./security/rate-limit-middleware.js";
+import { getRateLimitConfigFromEnv, TierName } from "./config/rate-limits.js";
+import {
+  isAuthEnabled,
+  validateApiKeyFormat,
+  extractKeyPrefix,
+  verifyApiKey,
+  isKeyExpired as _isKeyExpired,
+  isIpAllowed as _isIpAllowed,
+  hasScope,
+  createAuditEntry as _createAuditEntry,
+  AuditAction as _AuditAction,
+  hashForAudit as _hashForAudit,
+  getRateLimitsForTier as _getRateLimitsForTier,
+  createAuthCache,
+  type AuthResult as _AuthResult,
+} from "./middleware/auth.js";
+import { MetricsCollector } from "./monitoring/metrics.js";
 
 // Import better-sqlite3 constructor using createRequire
 const require = createRequire(import.meta.url);
@@ -44,9 +67,34 @@ interface ConnectionPool {
   sqlite?: any; // better-sqlite3 Database instance
   embeddingClient?: EmbeddingClient;
   hybridSearch?: HybridSearchEngine;
+  rateLimiter?: RateLimitMiddleware;
+  postgres?: any; // PostgreSQL client for auth
+  metricsCollector?: MetricsCollector;
 }
 
 const connections: ConnectionPool = {};
+
+/**
+ * Auth cache for performance (avoids repeated bcrypt comparisons)
+ */
+const authCache = createAuthCache({ maxSize: 1000, ttlSeconds: 60 });
+
+/**
+ * Default user ID for MCP requests when auth is disabled
+ * SEC-CRIT-001: When AUTH_ENABLED=true, this is replaced with authenticated user ID
+ */
+const DEFAULT_USER_ID = "mcp-default-user";
+
+/**
+ * Authentication context for authenticated requests
+ */
+interface AuthContext {
+  userId: string;
+  keyId: string;
+  tier: string;
+  scopes: string[];
+  authenticated: boolean;
+}
 
 /**
  * Tool definitions for the MCP server
@@ -148,7 +196,7 @@ async function initializeConnections(): Promise<void> {
   try {
     console.error("[INFO] Initializing connections to external services...");
 
-    // Initialize Redis (optional - used for caching)
+    // Initialize Redis (optional - used for caching and rate limiting)
     try {
       connections.redis = new Redis({
         host: process.env.REDIS_HOST || "localhost",
@@ -180,7 +228,7 @@ async function initializeConnections(): Promise<void> {
         errorMsg
       );
       console.error(
-        "\x1b[34mℹ️  Impact:\x1b[0m Working memory disabled"
+        "\x1b[34mℹ️  Impact:\x1b[0m Working memory and rate limiting disabled"
       );
       console.error(
         "\x1b[32m💡 Solution:\x1b[0m Start Redis with: docker-compose up -d redis"
@@ -275,14 +323,57 @@ async function initializeConnections(): Promise<void> {
       connections.hybridSearch = undefined;
     }
 
+    // Initialize Rate Limiter (SEC-HIGH-001)
+    try {
+      if (connections.redis) {
+        const rateLimitConfig = getRateLimitConfigFromEnv();
+        connections.rateLimiter = createRateLimitMiddleware(connections.redis, {
+          failOpen: rateLimitConfig.failOpen,
+          tier: rateLimitConfig.defaultTier as TierName,
+        });
+        console.error(
+          `[INFO] Rate limiter initialized (tier: ${rateLimitConfig.defaultTier}, failOpen: ${rateLimitConfig.failOpen})`
+        );
+      } else {
+        console.error(
+          "[WARN] Rate limiter not initialized (Redis required for rate limiting)"
+        );
+      }
+    } catch (err) {
+      console.error(
+        "[WARN] Rate limiter initialization failed:",
+        err instanceof Error ? err.message : String(err)
+      );
+      connections.rateLimiter = undefined;
+    }
+
+    // Initialize Metrics Collector (HIGH-001)
+    try {
+      connections.metricsCollector = new MetricsCollector({
+        prefix: "mcp",
+        collectDefaultMetrics: true,
+        requireAuth: process.env.METRICS_AUTH_ENABLED === "true",
+        authToken: process.env.METRICS_AUTH_TOKEN,
+      });
+      console.error("[INFO] ✅ Metrics collector initialized");
+    } catch (err) {
+      console.error(
+        "[WARN] Metrics collector initialization failed:",
+        err instanceof Error ? err.message : String(err)
+      );
+      connections.metricsCollector = undefined;
+    }
+
     // Print service status summary
     console.error("\n" + "=".repeat(60));
     console.error("📊 Vesper Service Status:");
     console.error("=".repeat(60));
     console.error(`SQLite:           ${connections.sqlite ? '\x1b[32m✓ Ready\x1b[0m' : '\x1b[31m✗ Failed\x1b[0m'} (required)`);
-    console.error(`Redis:            ${connections.redis ? '\x1b[32m✓ Ready\x1b[0m' : '\x1b[33m⚠ Disabled\x1b[0m'} (working memory)`);
+    console.error(`Redis:            ${connections.redis ? '\x1b[32m✓ Ready\x1b[0m' : '\x1b[33m⚠ Disabled\x1b[0m'} (working memory, rate limiting)`);
     console.error(`Embedding:        ${connections.embeddingClient ? '\x1b[32m✓ Ready\x1b[0m' : '\x1b[33m⚠ Disabled\x1b[0m'} (semantic search)`);
     console.error(`Qdrant:           ${connections.hybridSearch ? '\x1b[32m✓ Ready\x1b[0m' : '\x1b[33m⚠ Disabled\x1b[0m'} (vector storage)`);
+    console.error(`Rate Limiter:     ${connections.rateLimiter ? '\x1b[32m✓ Ready\x1b[0m' : '\x1b[33m⚠ Disabled\x1b[0m'} (requires Redis)`);
+    console.error(`Metrics:          ${connections.metricsCollector ? '\x1b[32m✓ Ready\x1b[0m' : '\x1b[33m⚠ Disabled\x1b[0m'} (monitoring)`);
     console.error("=".repeat(60));
 
     // Show degraded mode warning if any optional services are down
@@ -344,9 +435,9 @@ async function handleStoreMemory(input: unknown): Promise<Record<string, unknown
   }
 
   try {
-    // Validate input
+    // Validate input (SEC-006)
     const validatedInput = validateInput(StoreMemoryInputSchema, input);
-    // Use pure UUID for Qdrant compatibility
+    // Use pure UUID for Qdrant compatibility (Qdrant only accepts pure UUIDs or integers)
     const id = randomUUID();
     const now = Date.now();
 
@@ -394,6 +485,8 @@ async function handleStoreMemory(input: unknown): Promise<Record<string, unknown
           "[ERROR] Failed to store embedding in Qdrant:",
           err instanceof Error ? err.message : String(err)
         );
+        console.error("[ERROR] Full error:", err);
+        // Don't swallow the error - log it properly
         throw new McpError(
           ErrorCode.InternalError,
           `Qdrant storage failed: ${err instanceof Error ? err.message : String(err)}`
@@ -432,7 +525,7 @@ async function handleRetrieveMemory(input: unknown): Promise<Record<string, unkn
   }
 
   try {
-    // Validate input
+    // Validate input (SEC-006)
     const validatedInput = validateInput(RetrieveMemoryInputSchema, input);
     const maxResults = validatedInput.max_results || 5;
 
@@ -535,7 +628,7 @@ async function handleListRecent(input: unknown): Promise<Record<string, unknown>
   }
 
   try {
-    // Validate input
+    // Validate input (SEC-006)
     const validatedInput = validateInput(ListRecentInputSchema, input);
     const limit = validatedInput.limit || 5;
     let query =
@@ -594,7 +687,7 @@ async function handleGetStats(input: unknown): Promise<Record<string, unknown>> 
   }
 
   try {
-    // Validate input
+    // Validate input (SEC-006)
     const validatedInput = validateInput(GetStatsInputSchema, input);
     const countStmt = connections.sqlite.prepare("SELECT COUNT(*) as count FROM memories");
     const countResult = countStmt.get() as { count: number };
@@ -611,8 +704,6 @@ async function handleGetStats(input: unknown): Promise<Record<string, unknown>> 
       total_memories: totalMemories,
       redis_connected: connections.redis ? true : false,
       sqlite_connected: connections.sqlite ? true : false,
-      embedding_connected: connections.embeddingClient ? true : false,
-      qdrant_connected: connections.hybridSearch ? true : false,
     };
 
     // Add memory type breakdown
@@ -645,37 +736,287 @@ async function handleGetStats(input: unknown): Promise<Record<string, unknown>> 
 }
 
 /**
- * Process tool calls
+ * Result from tool processing with optional rate limit headers
+ */
+interface ToolResult {
+  result: Record<string, unknown>;
+  rateLimitHeaders?: RateLimitCheckResult["headers"];
+}
+
+/**
+ * Mock API key record (for testing without PostgreSQL)
+ * In production, this would query the api_keys table
+ */
+interface _MockApiKeyRecord {
+  id: string;
+  userId: string;
+  keyHash: string;
+  scopes: string[];
+  tier: string;
+  expiresAt: Date | null;
+  ipAllowlist: string[] | null;
+  revokedAt: Date | null;
+}
+
+/**
+ * Authenticate an MCP request
+ *
+ * SEC-CRIT-001: Implements API key authentication
+ *
+ * @param apiKey - API key from request metadata
+ * @param toolName - Name of the tool being called
+ * @param ip - Client IP address (if available)
+ * @returns Authentication context
+ */
+async function authenticateMcpRequest(
+  apiKey: string | undefined,
+  toolName: string,
+  _ip: string = "127.0.0.1"
+): Promise<AuthContext> {
+  // Check if auth is enabled
+  if (!isAuthEnabled()) {
+    console.error("[INFO] Auth disabled, using default user");
+    return {
+      userId: DEFAULT_USER_ID,
+      keyId: "none",
+      tier: "standard",
+      scopes: ["*"],
+      authenticated: false,
+    };
+  }
+
+  // Require API key when auth is enabled
+  if (!apiKey) {
+    console.error("[WARN] Auth failed: No API key provided");
+    // Track failed auth attempt (HIGH-001)
+    if (connections.metricsCollector) {
+      connections.metricsCollector.incrementAuthAttempts("failed");
+    }
+    throw new McpError(ErrorCode.InvalidRequest, "API key required");
+  }
+
+  // Validate format
+  if (!validateApiKeyFormat(apiKey)) {
+    console.error("[WARN] Auth failed: Invalid API key format");
+    // Track failed auth attempt (HIGH-001)
+    if (connections.metricsCollector) {
+      connections.metricsCollector.incrementAuthAttempts("failed");
+    }
+    throw new McpError(ErrorCode.InvalidRequest, "Invalid API key format");
+  }
+
+  // Extract prefix for lookup
+  const prefix = extractKeyPrefix(apiKey);
+  if (!prefix) {
+    // Track failed auth attempt (HIGH-001)
+    if (connections.metricsCollector) {
+      connections.metricsCollector.incrementAuthAttempts("failed");
+    }
+    throw new McpError(ErrorCode.InvalidRequest, "Invalid API key");
+  }
+
+  // Check cache first
+  const cached = authCache.get(prefix);
+  if (cached) {
+    console.error(`[INFO] Auth cache hit for key prefix ${prefix.slice(0, 4)}...`);
+    // Track successful auth (cached) (HIGH-001)
+    if (connections.metricsCollector) {
+      connections.metricsCollector.incrementAuthAttempts("success");
+    }
+    return {
+      userId: cached.userId,
+      keyId: prefix,
+      tier: cached.tier,
+      scopes: ["*"], // Cache doesn't store scopes, assume full access
+      authenticated: true,
+    };
+  }
+
+  // In production, this would query PostgreSQL
+  // For now, we use an environment variable to validate a single key
+  const validKeyHash = process.env.MCP_API_KEY_HASH;
+  if (!validKeyHash) {
+    console.error("[WARN] No MCP_API_KEY_HASH configured, rejecting request");
+    // Track failed auth attempt (HIGH-001)
+    if (connections.metricsCollector) {
+      connections.metricsCollector.incrementAuthAttempts("failed");
+    }
+    throw new McpError(
+      ErrorCode.InternalError,
+      "Authentication not configured"
+    );
+  }
+
+  // Verify the key
+  const isValid = await verifyApiKey(apiKey, validKeyHash);
+  if (!isValid) {
+    console.error(`[WARN] Auth failed: Invalid API key (prefix: ${prefix.slice(0, 4)}...)`);
+    // Track failed auth attempt (HIGH-001)
+    if (connections.metricsCollector) {
+      connections.metricsCollector.incrementAuthAttempts("failed");
+    }
+    throw new McpError(ErrorCode.InvalidRequest, "Invalid API key");
+  }
+
+  // Key is valid - cache the result
+  const authContext: AuthContext = {
+    userId: process.env.MCP_API_KEY_USER_ID || "authenticated-user",
+    keyId: prefix,
+    tier: process.env.MCP_API_KEY_TIER || "standard",
+    scopes: (process.env.MCP_API_KEY_SCOPES || "*").split(","),
+    authenticated: true,
+  };
+
+  // Check scope
+  if (!hasScope(authContext.scopes, toolName)) {
+    console.error(`[WARN] Auth failed: Missing scope ${toolName}`);
+    // Track failed auth attempt (HIGH-001)
+    if (connections.metricsCollector) {
+      connections.metricsCollector.incrementAuthAttempts("failed");
+    }
+    throw new McpError(ErrorCode.InvalidRequest, "Insufficient permissions");
+  }
+
+  // Cache the result
+  authCache.set(prefix, { userId: authContext.userId, tier: authContext.tier });
+
+  console.error(
+    `[INFO] Auth success: user=${authContext.userId}, tier=${authContext.tier}`
+  );
+
+  // Track successful auth attempt (HIGH-001)
+  if (connections.metricsCollector) {
+    connections.metricsCollector.incrementAuthAttempts("success");
+  }
+
+  return authContext;
+}
+
+/**
+ * Process tool calls with authentication and rate limiting
+ *
+ * SEC-CRIT-001: Integrates API key authentication
+ * SEC-HIGH-001: Integrates rate limiting into all MCP tool handlers
+ * SEC-HIGH-002: Implements fail-closed behavior when Redis unavailable
  */
 async function processTool(
   name: string,
-  input: Record<string, unknown>
-): Promise<Record<string, unknown>> {
-  console.error(`[INFO] Processing tool: ${name}`);
+  input: Record<string, unknown>,
+  authContext: AuthContext
+): Promise<ToolResult> {
+  const userId = authContext.userId;
+  console.error(`[INFO] Processing tool: ${name} for user: ${userId}`);
 
   // Check if Vesper is disabled (pass-through mode)
   const isEnabled = process.env.VESPER_ENABLED !== 'false';
   if (!isEnabled) {
     console.error('[INFO] Vesper is disabled (pass-through mode)');
     return {
-      success: true,
-      disabled: true,
-      message: "Vesper memory system is currently disabled (pass-through mode). Enable with 'vesper enable'.",
+      result: {
+        success: true,
+        disabled: true,
+        message: "Vesper memory system is currently disabled (pass-through mode). Enable with 'vesper enable'.",
+      },
     };
   }
 
-  // Process the tool
-  switch (name) {
-    case "store_memory":
-      return await handleStoreMemory(input);
-    case "retrieve_memory":
-      return await handleRetrieveMemory(input);
-    case "list_recent":
-      return await handleListRecent(input);
-    case "get_stats":
-      return await handleGetStats(input);
-    default:
-      throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+  // Start metrics timer (HIGH-001)
+  const startTime = Date.now();
+
+  try {
+    // Apply rate limiting if available (SEC-HIGH-001)
+    let rateLimitResult: RateLimitCheckResult | undefined;
+
+    if (connections.rateLimiter) {
+      try {
+        rateLimitResult = await connections.rateLimiter.checkRateLimit(userId, name);
+
+        if (!rateLimitResult.allowed) {
+          // Track rate limit hit in metrics (HIGH-001)
+          if (connections.metricsCollector) {
+            connections.metricsCollector.incrementRateLimitHits(userId, name);
+          }
+
+          // Return 429 rate limit error
+          const retryAfter = rateLimitResult.headers["Retry-After"] || "60";
+          throw new RateLimitError(
+            `Rate limit exceeded for ${name}. Limit: ${rateLimitResult.headers["X-RateLimit-Limit"]}/min. ` +
+              `Reset in ${retryAfter} seconds.`,
+            429,
+            parseInt(retryAfter)
+          );
+        }
+
+        console.error(
+          `[INFO] Rate limit check passed for ${name}: ${rateLimitResult.remaining} remaining`
+        );
+      } catch (err) {
+        if (err instanceof RateLimitError) {
+          throw err; // Re-throw rate limit errors
+        }
+
+        // SEC-HIGH-002: Fail closed when Redis unavailable
+        console.error(
+          "[WARN] Rate limit check failed:",
+          err instanceof Error ? err.message : String(err)
+        );
+        throw new McpError(
+          ErrorCode.InternalError,
+          "Service temporarily unavailable. Please try again in a few minutes."
+        );
+      }
+    }
+
+    // Process the tool
+    let result: Record<string, unknown>;
+
+    switch (name) {
+      case "store_memory":
+        result = await handleStoreMemory(input);
+        break;
+      case "retrieve_memory":
+        result = await handleRetrieveMemory(input);
+        break;
+      case "list_recent":
+        result = await handleListRecent(input);
+        break;
+      case "get_stats":
+        result = await handleGetStats(input);
+        break;
+      default:
+        throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+    }
+
+    // Track successful request in metrics (HIGH-001)
+    if (connections.metricsCollector) {
+      const duration = (Date.now() - startTime) / 1000; // Convert to seconds
+      connections.metricsCollector.incrementRequests(name, "success");
+      connections.metricsCollector.recordLatency(name, duration);
+    }
+
+    return {
+      result,
+      rateLimitHeaders: rateLimitResult?.headers,
+    };
+  } catch (err) {
+    // Track failed request in metrics (HIGH-001)
+    if (connections.metricsCollector) {
+      const duration = (Date.now() - startTime) / 1000; // Convert to seconds
+      connections.metricsCollector.incrementRequests(name, "error");
+      connections.metricsCollector.recordLatency(name, duration);
+
+      // Track error type
+      if (err instanceof RateLimitError) {
+        connections.metricsCollector.incrementErrors("rate_limit");
+      } else if (err instanceof McpError) {
+        connections.metricsCollector.incrementErrors("mcp_error");
+      } else {
+        connections.metricsCollector.incrementErrors("unknown");
+      }
+    }
+
+    // Re-throw the error
+    throw err;
   }
 }
 
@@ -683,7 +1024,7 @@ async function processTool(
  * Main server function
  */
 async function main(): Promise<void> {
-  console.error("[INFO] Starting Vesper (Simplified)...");
+  console.error("[INFO] Starting Vesper...");
 
   // Initialize connections
   await initializeConnections();
@@ -713,21 +1054,99 @@ async function main(): Promise<void> {
     console.error(`[INFO] Tool call received: ${name} (requestId: ${requestId})`);
 
     try {
-      // Process the tool (no authentication or rate limiting)
-      const result = await processTool(
+      // Extract API key from request metadata (SEC-CRIT-001)
+      // MCP clients can pass API key in _meta.apiKey or via environment
+      const meta = (request.params as any)._meta || {};
+      const apiKey = meta.apiKey || process.env.MCP_API_KEY;
+
+      // Authenticate the request
+      const authContext = await authenticateMcpRequest(apiKey, name);
+
+      // Process the tool with auth context
+      const { result, rateLimitHeaders } = await processTool(
         name,
-        args as Record<string, unknown>
+        args as Record<string, unknown>,
+        authContext
       );
+
+      // Include rate limit headers in the response metadata
+      const responseData = {
+        ...result,
+        // Include rate limit info for transparency
+        _rateLimit: rateLimitHeaders
+          ? {
+              limit: rateLimitHeaders["X-RateLimit-Limit"],
+              remaining: rateLimitHeaders["X-RateLimit-Remaining"],
+              reset: rateLimitHeaders["X-RateLimit-Reset"],
+            }
+          : undefined,
+      };
 
       return {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(result, null, 2),
+            text: JSON.stringify(responseData, null, 2),
           },
         ],
       };
     } catch (err) {
+      // Handle rate limit errors specially (SEC-HIGH-001)
+      if (err instanceof RateLimitError) {
+        console.error(`[WARN] Rate limit error for ${name}: ${err.message}`);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(
+                {
+                  error: err.message,
+                  code: "RATE_LIMITED",
+                  statusCode: err.statusCode,
+                  retryAfter: err.retryAfter,
+                  tool: name,
+                  requestId,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      // Handle auth errors (SEC-CRIT-001)
+      if (err instanceof McpError) {
+        const isAuthError =
+          err.message.includes("API key") ||
+          err.message.includes("permission") ||
+          err.message.includes("Authentication");
+
+        if (isAuthError) {
+          console.error(`[WARN] Auth error for ${name}: ${err.message}`);
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(
+                  {
+                    error: err.message,
+                    code: "UNAUTHENTICATED",
+                    statusCode: 401,
+                    tool: name,
+                    requestId,
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+            isError: true,
+          };
+        }
+      }
+
       const errorMessage =
         err instanceof McpError
           ? err.message
