@@ -16,8 +16,12 @@
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import Redis from "ioredis";
-import * as Database from "better-sqlite3";
+import { createRequire } from "module";
 import { randomUUID } from "crypto";
+
+// Import better-sqlite3 using createRequire for ESM compatibility
+const require = createRequire(import.meta.url);
+const Database = require("better-sqlite3");
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
@@ -85,7 +89,7 @@ const seedMemories = [
 describe("Memory System Performance Benchmarks", () => {
   let redis: Redis | null = null;
   let redisAvailable = false;
-  let db: Database.Database;
+  let db: ReturnType<typeof Database>;
   const userId = "benchmark-user";
   const results: BenchmarkResult[] = [];
 

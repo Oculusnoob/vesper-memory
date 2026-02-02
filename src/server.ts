@@ -49,6 +49,12 @@ interface ConnectionPool {
 const connections: ConnectionPool = {};
 
 /**
+ * Runtime state for Vesper enable/disable
+ * Used for A/B benchmarking (enabled vs disabled comparison)
+ */
+let vesperEnabled = true;
+
+/**
  * Tool definitions for the MCP server
  */
 const TOOLS = [
@@ -137,6 +143,33 @@ const TOOLS = [
           description: "Include detailed per-layer statistics (default: false)",
         },
       },
+    },
+  },
+  {
+    name: "vesper_enable",
+    description:
+      "Enable the Vesper memory system. Used for A/B benchmarking.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+    },
+  },
+  {
+    name: "vesper_disable",
+    description:
+      "Disable the Vesper memory system (pass-through mode). Used for A/B benchmarking.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+    },
+  },
+  {
+    name: "vesper_status",
+    description:
+      "Get the current status of the Vesper memory system (enabled or disabled).",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
     },
   },
 ];
@@ -645,6 +678,47 @@ async function handleGetStats(input: unknown): Promise<Record<string, unknown>> 
 }
 
 /**
+ * Handle vesper_enable tool call
+ */
+async function handleVesperEnable(): Promise<Record<string, unknown>> {
+  vesperEnabled = true;
+  console.error("[INFO] Vesper memory system enabled");
+  return {
+    success: true,
+    enabled: true,
+    message: "Vesper memory system enabled",
+  };
+}
+
+/**
+ * Handle vesper_disable tool call
+ */
+async function handleVesperDisable(): Promise<Record<string, unknown>> {
+  vesperEnabled = false;
+  console.error("[INFO] Vesper memory system disabled (pass-through mode)");
+  return {
+    success: true,
+    enabled: false,
+    message: "Vesper memory system disabled (pass-through mode)",
+  };
+}
+
+/**
+ * Handle vesper_status tool call
+ */
+async function handleVesperStatus(): Promise<Record<string, unknown>> {
+  console.error(`[INFO] Vesper status: ${vesperEnabled ? "enabled" : "disabled"}`);
+  return {
+    success: true,
+    enabled: vesperEnabled,
+    mode: vesperEnabled ? "active" : "pass-through",
+    message: vesperEnabled
+      ? "Vesper is actively processing memory operations"
+      : "Vesper is in pass-through mode (memory operations are skipped)",
+  };
+}
+
+/**
  * Process tool calls
  */
 async function processTool(
@@ -653,18 +727,27 @@ async function processTool(
 ): Promise<Record<string, unknown>> {
   console.error(`[INFO] Processing tool: ${name}`);
 
+  // Handle toggle tools first (these always work regardless of enabled state)
+  switch (name) {
+    case "vesper_enable":
+      return await handleVesperEnable();
+    case "vesper_disable":
+      return await handleVesperDisable();
+    case "vesper_status":
+      return await handleVesperStatus();
+  }
+
   // Check if Vesper is disabled (pass-through mode)
-  const isEnabled = process.env.VESPER_ENABLED !== 'false';
-  if (!isEnabled) {
+  if (!vesperEnabled) {
     console.error('[INFO] Vesper is disabled (pass-through mode)');
     return {
       success: true,
       disabled: true,
-      message: "Vesper memory system is currently disabled (pass-through mode). Enable with 'vesper enable'.",
+      message: "Vesper memory system is currently disabled (pass-through mode). Enable with vesper_enable tool.",
     };
   }
 
-  // Process the tool
+  // Process memory tools
   switch (name) {
     case "store_memory":
       return await handleStoreMemory(input);
@@ -763,7 +846,7 @@ async function main(): Promise<void> {
 
   await server.connect(transport);
   console.error("[INFO] Vesper running on stdio transport");
-  console.error("[INFO] Available tools: store_memory, retrieve_memory, list_recent, get_stats");
+  console.error("[INFO] Available tools: store_memory, retrieve_memory, list_recent, get_stats, vesper_enable, vesper_disable, vesper_status");
 }
 
 // Run the server

@@ -145,14 +145,14 @@ async function install() {
     throw err;
   }
 
-  // Start Docker services
+  // Start Docker services (3 services: redis, qdrant, embedding)
   info('Starting infrastructure services...');
   try {
-    execSync('docker-compose up -d redis qdrant embedding', {
+    execSync('docker-compose up -d', {
       cwd: INSTALL_DIR,
       stdio: 'inherit',
     });
-    success('Services started');
+    success('Services started (redis, qdrant, embedding)');
   } catch (err) {
     error('Failed to start services');
     throw err;

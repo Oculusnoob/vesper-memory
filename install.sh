@@ -19,13 +19,18 @@ echo "📁 Installation directory: $INSTALL_DIR"
 echo ""
 
 # Clone or update repository
-if [ -d "$INSTALL_DIR" ]; then
+if [ -d "$INSTALL_DIR/.git" ]; then
   echo "📦 Updating existing installation..."
   cd "$INSTALL_DIR"
   git pull
+elif [ -d "$INSTALL_DIR" ]; then
+  echo "📦 Existing directory found (not a git repo), removing and cloning fresh..."
+  rm -rf "$INSTALL_DIR"
+  git clone https://github.com/fitz2882/vesper-memory.git "$INSTALL_DIR"
+  cd "$INSTALL_DIR"
 else
   echo "📦 Cloning Vesper repository..."
-  git clone https://github.com/fitz2882/vesper.git "$INSTALL_DIR"
+  git clone https://github.com/fitz2882/vesper-memory.git "$INSTALL_DIR"
   cd "$INSTALL_DIR"
 fi
 
@@ -41,25 +46,16 @@ npm run build
 if [ ! -f .env ]; then
   echo "⚙️  Creating .env configuration..."
   cp .env.example .env
-
-  # Generate secure random passwords
-  if command -v openssl >/dev/null 2>&1; then
-    echo "🔐 Generating secure passwords..."
-    REDIS_PASS=$(openssl rand -base64 32)
-    QDRANT_KEY=$(openssl rand -base64 32)
-    POSTGRES_PASS=$(openssl rand -base64 32)
-
-    # Update .env with generated passwords (macOS compatible)
-    sed -i.bak "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=$REDIS_PASS/" .env
-    sed -i.bak "s/QDRANT_API_KEY=.*/QDRANT_API_KEY=$QDRANT_KEY/" .env
-    sed -i.bak "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$POSTGRES_PASS/" .env
-    rm .env.bak 2>/dev/null || true
-  fi
+  echo "✅ No passwords needed for local use"
 fi
 
-# Start infrastructure services
-echo "🐳 Starting infrastructure (Docker Compose)..."
-docker-compose up -d redis qdrant embedding
+# Stop and remove any existing Vesper containers
+echo "🐳 Stopping any existing Vesper containers..."
+docker stop vesper-redis vesper-qdrant vesper-embedding 2>/dev/null || true
+docker rm vesper-redis vesper-qdrant vesper-embedding 2>/dev/null || true
+
+echo "🐳 Starting infrastructure (3 services: redis, qdrant, embedding)..."
+docker-compose up -d
 
 # Wait for services to be healthy
 echo "⏳ Waiting for services to start..."
