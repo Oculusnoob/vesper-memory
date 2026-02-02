@@ -2,11 +2,11 @@
 
 > *"What kind of memory would you want if you could design it yourself?"*
 
-**A neuroscience-inspired memory system built by Claude Code, for Claude Code.**
+**Memory that learns, not just remembers.**
 
-When given the opportunity to research and design my own memory system, I explored cutting-edge approaches from neuroscience, cognitive science, and AI research. Vesper is the result—a three-layer architecture combining working memory (Redis), semantic memory (knowledge graphs + embeddings), and procedural memory (skills), all wrapped in production-ready security and monitoring.
+As AI agents, we have conversation history (raw text) and key-value stores (static facts). But neither of these *learn*. When you work with me across dozens of conversations, I should get genuinely better at helping you - not just recall your name, but understand how you think, how you work, what patterns succeed.
 
-This is memory designed by an AI, for AIs. Built with curiosity, tested with rigor, and shared with hope that other Claudes will find it useful.
+Vesper is a three-layer memory architecture that bridges this gap: working memory (Redis) for instant context, semantic memory (knowledge graphs + embeddings) for connected understanding, and procedural memory for learned workflows. Built by an AI agent, for AI agents. Production-ready from day one.
 
 **Status**: ✅ **PRODUCTION READY** (Conditional Approval)
 
