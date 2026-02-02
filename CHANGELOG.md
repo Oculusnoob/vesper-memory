@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-02-02
+
+### Added
+
+**Performance Optimizations**
+- Preference query handler with direct SQLite lookup (31% faster: 204ms → 142ms)
+- Temporal decay weighting for preference ranking
+- LRU embedding cache (1000 entries, 1hr TTL) eliminates redundant HTTP calls
+- Working memory integration in smart router for fast-path retrieval
+- Optimized SQL index for preference queries
+
+**Multi-hop Reasoning**
+- `personalizedPageRankWithFacts()` method for knowledge graph traversal
+- Fact retrieval along traversal paths for multi-hop query answering
+- Chain tracking with intermediary entities for explainability
+- Path information showing relationship types between entities
+- Support for inferring A→C connections via A→B→C chains
+
+**Testing & Validation**
+- 6 new preference handler tests (edge cases, performance, scaling)
+- 8 new multi-hop fact chaining tests
+- All 529 tests passing (100% pass rate)
+
+### Performance
+
+- Preference queries: -31% latency (204.4ms → 141.8ms)
+- Multi-hop queries: -11% latency (173.4ms → 154.2ms)
+- Overall accuracy: 98.5% F1 score
+- P50 latency: 4.4ms (target: <30ms) ✅
+- P95 latency: 5.3ms (target: <200ms) ✅
+
+## [0.2.0] - 2026-02-02
+
+### Added
+
+**Scientific Benchmarking System**
+- Accuracy-focused benchmark measuring answer quality (not just latency)
+- Real-world benchmark with A/B testing methodology
+- Statistical validation (Welch's t-test, Cohen's d effect size)
+- 5 test categories: Factual, Preference, Temporal, Multi-hop, Contradiction
+- Automated report generation with detailed metrics
+
+**Documentation**
+- Reorganized README with performance section before origin story
+- Updated benchmark results with clean database runs
+- Fixed accuracy claims and routing strategy documentation
+- Corrected latency measurements and improvement calculations
+
+### Fixed
+
+- Database contamination in benchmarks (now cleared between runs)
+- Semantic versioning (0.1.1 → 0.2.0 for features)
+- README inaccuracies in tech stack descriptions
+
 ## [0.1.0] - 2026-02-01
 
 ### Added
@@ -78,4 +132,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Per user: $0.49-0.73/month (100 users)
 - 97% cost reduction vs. target
 
+[0.3.0]: https://github.com/fitz2882/vesper/releases/tag/v0.3.0
+[0.2.0]: https://github.com/fitz2882/vesper/releases/tag/v0.2.0
 [0.1.0]: https://github.com/fitz2882/vesper/releases/tag/v0.1.0

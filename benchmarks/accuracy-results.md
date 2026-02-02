@@ -1,8 +1,8 @@
 # Vesper Accuracy Benchmark Report
 
-**Generated:** 2026-02-02T22:21:28.708Z
-**Benchmark ID:** accuracy-c7e5214a
-**Duration:** 11.1s
+**Generated:** 2026-02-02T23:04:19.705Z
+**Benchmark ID:** accuracy-31ae0e95
+**Duration:** 13.0s
 
 ## Executive Summary
 
@@ -39,7 +39,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 | Recall | 100.0% | 10.0% | +90.0% |
 | F1 Score | 100.0% | 10.0% | +90.0% |
 | Memory Hit Rate | 100.0% | N/A | - |
-| Avg Latency | 163.5ms | 0.0ms | - |
+| Avg Latency | 173.8ms | 0.0ms | - |
 
 **Statistical Analysis:**
 - p-value: 0.0000
@@ -57,7 +57,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 | Recall | 100.0% | 0.0% | +100.0% |
 | F1 Score | 100.0% | 0.0% | +100.0% |
 | Memory Hit Rate | 100.0% | N/A | - |
-| Avg Latency | 204.4ms | 0.0ms | - |
+| Avg Latency | 213.1ms | 0.0ms | - |
 
 **Statistical Analysis:**
 - p-value: 0.0000
@@ -75,7 +75,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 | Recall | 100.0% | 0.0% | +100.0% |
 | F1 Score | 100.0% | 0.0% | +100.0% |
 | Memory Hit Rate | 100.0% | N/A | - |
-| Avg Latency | 160.6ms | 0.0ms | - |
+| Avg Latency | 215.0ms | 0.0ms | - |
 
 **Statistical Analysis:**
 - p-value: 0.0000
@@ -93,7 +93,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 | Recall | 92.3% | 0.0% | +92.3% |
 | F1 Score | 92.3% | 0.0% | +92.3% |
 | Memory Hit Rate | 100.0% | N/A | - |
-| Avg Latency | 173.4ms | 0.0ms | - |
+| Avg Latency | 219.1ms | 0.0ms | - |
 
 **Statistical Analysis:**
 - p-value: 0.0000
@@ -111,7 +111,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 | Recall | 100.0% | 0.0% | +100.0% |
 | F1 Score | 100.0% | 0.0% | +100.0% |
 | Memory Hit Rate | 100.0% | N/A | - |
-| Avg Latency | 92.5ms | 0.0ms | - |
+| Avg Latency | 120.6ms | 0.0ms | - |
 
 **Statistical Analysis:**
 - p-value: 0.0000

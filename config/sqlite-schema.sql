@@ -32,6 +32,12 @@ CREATE INDEX IF NOT EXISTS idx_entities_created_at ON entities(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_entities_last_accessed ON entities(last_accessed DESC);
 CREATE INDEX IF NOT EXISTS idx_entities_access_count ON entities(access_count DESC);
 
+-- Optimized index for preference queries (direct SQLite lookup optimization)
+-- Used by handlePreferenceQueryDirect for fast preference retrieval
+CREATE INDEX IF NOT EXISTS idx_entities_preference_lookup
+  ON entities(type, last_accessed DESC, confidence DESC)
+  WHERE type = 'preference';
+
 -- ============================================================================
 -- RELATIONSHIPS TABLE
 -- Represents connections between entities with temporal decay

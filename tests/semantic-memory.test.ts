@@ -510,6 +510,254 @@ describe('SemanticMemoryLayer', () => {
     });
   });
 
+  describe('Multi-hop Fact Chaining', () => {
+    it('should return facts along traversal path', () => {
+      // Setup: Vesper -> MCP -> Model Context Protocol
+      const vesper = semantic.upsertEntity({ name: 'Vesper', type: 'project' });
+      const mcp = semantic.upsertEntity({ name: 'MCP', type: 'concept' });
+
+      semantic.upsertRelationship({
+        sourceId: vesper.id,
+        targetId: mcp.id,
+        relationType: 'uses',
+        strength: 0.9,
+      });
+
+      // Store facts about the entities
+      db.prepare(`
+        INSERT INTO facts (id, entity_id, property, value, confidence, valid_from)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('fact1', vesper.id, 'protocol', 'MCP', 1.0, new Date().toISOString());
+
+      db.prepare(`
+        INSERT INTO facts (id, entity_id, property, value, confidence, valid_from)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('fact2', mcp.id, 'stands_for', 'Model Context Protocol', 1.0, new Date().toISOString());
+
+      const results = semantic.personalizedPageRankWithFacts(vesper.id, 3);
+
+      // Should have facts included in results
+      expect(results.facts).toBeDefined();
+      expect(results.facts.length).toBeGreaterThanOrEqual(2);
+
+      // Should contain both facts
+      const factValues = results.facts.map(f => f.value);
+      expect(factValues).toContain('MCP');
+      expect(factValues).toContain('Model Context Protocol');
+    });
+
+    it('should chain facts across multiple hops', () => {
+      // Setup: Query -> Vesper -> MCP -> Model -> Context -> Protocol
+      const vesper = semantic.upsertEntity({ name: 'Vesper', type: 'project' });
+      const mcp = semantic.upsertEntity({ name: 'MCP', type: 'concept' });
+      const model = semantic.upsertEntity({ name: 'Model', type: 'concept' });
+      const context = semantic.upsertEntity({ name: 'Context', type: 'concept' });
+      const protocol = semantic.upsertEntity({ name: 'Protocol', type: 'concept' });
+
+      // Create chain: Vesper -> MCP -> Model -> Context -> Protocol
+      semantic.upsertRelationship({
+        sourceId: vesper.id,
+        targetId: mcp.id,
+        relationType: 'uses',
+        strength: 0.9,
+      });
+      semantic.upsertRelationship({
+        sourceId: mcp.id,
+        targetId: model.id,
+        relationType: 'contains',
+        strength: 0.9,
+      });
+      semantic.upsertRelationship({
+        sourceId: mcp.id,
+        targetId: context.id,
+        relationType: 'contains',
+        strength: 0.9,
+      });
+      semantic.upsertRelationship({
+        sourceId: mcp.id,
+        targetId: protocol.id,
+        relationType: 'is_a',
+        strength: 0.9,
+      });
+
+      // Store facts
+      db.prepare(`
+        INSERT INTO facts (id, entity_id, property, value, confidence, valid_from)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('fact1', vesper.id, 'uses_protocol', 'MCP', 1.0, new Date().toISOString());
+
+      db.prepare(`
+        INSERT INTO facts (id, entity_id, property, value, confidence, valid_from)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('fact2', mcp.id, 'full_name', 'Model Context Protocol', 1.0, new Date().toISOString());
+
+      db.prepare(`
+        INSERT INTO facts (id, entity_id, property, value, confidence, valid_from)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('fact3', model.id, 'definition', 'AI model reference', 1.0, new Date().toISOString());
+
+      // With depth 3, should reach all entities
+      const results = semantic.personalizedPageRankWithFacts(vesper.id, 3);
+
+      // Should find all 5 entities
+      expect(results.entities.length).toBe(5);
+
+      // Should include all facts from traversed entities
+      expect(results.facts.length).toBeGreaterThanOrEqual(3);
+
+      // Verify entity names found
+      const entityNames = results.entities.map(e => e.name);
+      expect(entityNames).toContain('Vesper');
+      expect(entityNames).toContain('MCP');
+      expect(entityNames).toContain('Model');
+      expect(entityNames).toContain('Context');
+      expect(entityNames).toContain('Protocol');
+    });
+
+    it('should include traversal path in results for explainability', () => {
+      const a = semantic.upsertEntity({ name: 'A', type: 'concept' });
+      const b = semantic.upsertEntity({ name: 'B', type: 'concept' });
+      const c = semantic.upsertEntity({ name: 'C', type: 'concept' });
+
+      semantic.upsertRelationship({
+        sourceId: a.id,
+        targetId: b.id,
+        relationType: 'related_to',
+        strength: 0.9,
+      });
+      semantic.upsertRelationship({
+        sourceId: b.id,
+        targetId: c.id,
+        relationType: 'related_to',
+        strength: 0.9,
+      });
+
+      const results = semantic.personalizedPageRankWithFacts(a.id, 3);
+
+      // Should include path information
+      expect(results.paths).toBeDefined();
+      expect(results.paths.length).toBeGreaterThan(0);
+
+      // Path to C should go through B
+      const pathToC = results.paths.find(p => p.targetId === c.id);
+      expect(pathToC).toBeDefined();
+      expect(pathToC?.hops).toBe(2);
+    });
+
+    it('should use default depth of 3 for multi-hop queries', () => {
+      const a = semantic.upsertEntity({ name: 'A', type: 'concept' });
+      const b = semantic.upsertEntity({ name: 'B', type: 'concept' });
+      const c = semantic.upsertEntity({ name: 'C', type: 'concept' });
+      const d = semantic.upsertEntity({ name: 'D', type: 'concept' });
+
+      semantic.upsertRelationship({
+        sourceId: a.id,
+        targetId: b.id,
+        relationType: 'related_to',
+        strength: 0.9,
+      });
+      semantic.upsertRelationship({
+        sourceId: b.id,
+        targetId: c.id,
+        relationType: 'related_to',
+        strength: 0.9,
+      });
+      semantic.upsertRelationship({
+        sourceId: c.id,
+        targetId: d.id,
+        relationType: 'related_to',
+        strength: 0.9,
+      });
+
+      // Without specifying depth, should use default of 3
+      const results = semantic.personalizedPageRankWithFacts(a.id);
+
+      // With depth 3, should reach D (3 hops from A)
+      const entityNames = results.entities.map(e => e.name);
+      expect(entityNames).toContain('D');
+    });
+
+    it('should aggregate facts from relationship paths for inference', () => {
+      // Test A->B and B->C should allow inferring A->C connection
+      const user = semantic.upsertEntity({ name: 'User', type: 'person' });
+      const project = semantic.upsertEntity({ name: 'MyProject', type: 'project' });
+      const tech = semantic.upsertEntity({ name: 'TypeScript', type: 'concept' });
+
+      semantic.upsertRelationship({
+        sourceId: user.id,
+        targetId: project.id,
+        relationType: 'works_on',
+        strength: 0.95,
+      });
+      semantic.upsertRelationship({
+        sourceId: project.id,
+        targetId: tech.id,
+        relationType: 'uses',
+        strength: 0.9,
+      });
+
+      db.prepare(`
+        INSERT INTO facts (id, entity_id, property, value, confidence, valid_from)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('fact1', project.id, 'language', 'TypeScript', 1.0, new Date().toISOString());
+
+      const results = semantic.personalizedPageRankWithFacts(user.id, 3);
+
+      // Should be able to infer User -> TypeScript connection through Project
+      const techEntity = results.entities.find(e => e.name === 'TypeScript');
+      expect(techEntity).toBeDefined();
+
+      // Should have chain info
+      const chainToTech = results.chains?.find(c => c.targetName === 'TypeScript');
+      expect(chainToTech).toBeDefined();
+      expect(chainToTech?.intermediaries).toContain('MyProject');
+    });
+
+    it('should return empty results for non-existent entity', () => {
+      const results = semantic.personalizedPageRankWithFacts('non-existent-id', 3);
+
+      expect(results.entities).toHaveLength(0);
+      expect(results.facts).toHaveLength(0);
+      expect(results.paths).toHaveLength(0);
+    });
+
+    it('should handle entities with no facts', () => {
+      const entity = semantic.upsertEntity({ name: 'NoFacts', type: 'concept' });
+
+      const results = semantic.personalizedPageRankWithFacts(entity.id, 3);
+
+      expect(results.entities).toHaveLength(1);
+      expect(results.facts).toHaveLength(0);
+    });
+
+    it('should sort facts by confidence', () => {
+      const entity = semantic.upsertEntity({ name: 'TestEntity', type: 'concept' });
+
+      // Insert facts with different confidence levels
+      db.prepare(`
+        INSERT INTO facts (id, entity_id, property, value, confidence, valid_from)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('low', entity.id, 'prop1', 'low_conf', 0.5, new Date().toISOString());
+
+      db.prepare(`
+        INSERT INTO facts (id, entity_id, property, value, confidence, valid_from)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('high', entity.id, 'prop2', 'high_conf', 0.95, new Date().toISOString());
+
+      db.prepare(`
+        INSERT INTO facts (id, entity_id, property, value, confidence, valid_from)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('medium', entity.id, 'prop3', 'medium_conf', 0.75, new Date().toISOString());
+
+      const results = semantic.personalizedPageRankWithFacts(entity.id, 1);
+
+      // Facts should be sorted by confidence descending
+      expect(results.facts[0].confidence).toBe(0.95);
+      expect(results.facts[1].confidence).toBe(0.75);
+      expect(results.facts[2].confidence).toBe(0.5);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle empty entity name gracefully', () => {
       expect(() => {

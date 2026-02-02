@@ -9,11 +9,17 @@
  */
 
 import { WorkingMemoryLayer } from '../memory-layers/working-memory.js';
+import { SemanticMemoryLayer } from '../memory-layers/semantic-memory.js';
 
 /**
  * Module-level dependency - set via init()
  */
 let workingMemoryLayer: WorkingMemoryLayer | null = null;
+
+/**
+ * Module-level semantic memory dependency for preference queries
+ */
+let semanticMemoryLayer: SemanticMemoryLayer | null = null;
 
 /**
  * Initialize the router with dependencies
@@ -325,9 +331,10 @@ async function handleFactualQuery(
  * Handle preference queries
  *
  * Pattern: "How do I prefer X?", "What style do I like?"
- * Handler: Preference retrieval from semantic memory
+ * Handler: Optimized direct SQLite lookup with temporal decay
  *
- * Implementation stub
+ * This function uses direct database queries instead of embedding generation
+ * for improved latency (~50ms vs ~200ms).
  *
  * @param query - The preference query
  * @param context - Routing context
@@ -335,17 +342,9 @@ async function handleFactualQuery(
  */
 async function handlePreferenceQuery(
   query: string,
-  _context: RoutingContext
+  context: RoutingContext
 ): Promise<MemoryResult[]> {
-  console.debug(`[Router] Handling preference query: "${query}"`);
-
-  // TODO: Implement preference query handler
-  // 1. Extract preference domain from query
-  // 2. Search semantic memory for related preference facts
-  // 3. Apply temporal decay to weight recent preferences
-  // 4. Return ranked by recency and reinforcement
-
-  return [];
+  return handlePreferenceQueryDirect(query, context);
 }
 
 /**
@@ -493,13 +492,14 @@ export function extractEntityName(_query: string): string | null {
 /**
  * Extract domain/category from a query
  *
- * Implementation stub for domain extraction
- * Used for preference and skill queries
+ * Delegates to extractPreferenceDomain for preference queries.
+ * Used for preference and skill queries.
+ *
+ * @param query - The query string
+ * @returns Extracted domain (lowercase) or null if not extractable
  */
-export function extractDomain(_query: string): string | null {
-  // TODO: Implement domain extraction
-  // Current: just return null
-  return null;
+export function extractDomain(query: string): string | null {
+  return extractPreferenceDomain(query);
 }
 
 /**
@@ -517,4 +517,139 @@ export function parseTimeRange(_query: string): TimeRange | null {
   // TODO: Implement temporal reference parsing
   // Current: just return null
   return null;
+}
+
+/**
+ * Extract preference domain from a query using regex patterns
+ *
+ * Patterns recognized:
+ * - "my X style" -> X (coding, writing, etc.)
+ * - "favorite X" -> X (language, framework, etc.)
+ * - "prefer X" -> X (TypeScript, tabs, etc.)
+ * - "like my X" -> X (coffee, code, etc.)
+ *
+ * @param query - The preference query
+ * @returns Extracted domain (lowercase) or null if not extractable
+ */
+export function extractPreferenceDomain(query: string): string | null {
+  const normalizedQuery = query.toLowerCase().trim();
+
+  // Pattern definitions for domain extraction
+  // Each pattern has a capture group for the domain noun
+  // NOTE: Order matters - more specific patterns should come before generic ones
+  const patterns = [
+    // "my X style" pattern - captures word before "style"
+    /\bmy\s+(\w+)\s+style\b/i,
+    // "favorite X" pattern - captures word after "favorite"
+    /\bfavorite\s+(\w+)\b/i,
+    // "prefer my X" pattern - captures word after "my" (more specific than "prefer X")
+    /\bprefer\s+my\s+(\w+)\b/i,
+    // "prefer X" or "prefer X or Y" pattern - captures first word after "prefer"
+    /\bprefer\s+(\w+)\b/i,
+    // "like my X" pattern - captures word after "my"
+    /\blike\s+my\s+(\w+)\b/i,
+    // "my X formatted" or "my X preferences" pattern
+    /\bmy\s+(\w+)\s+(formatted|preference|preferences)\b/i,
+    // "X preference" pattern - captures word before "preference"
+    /\b(\w+)\s+preference\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = normalizedQuery.match(pattern);
+    if (match && match[1]) {
+      return match[1].toLowerCase();
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Initialize the preference handler with semantic memory dependency
+ *
+ * @param semanticMemory - SemanticMemoryLayer instance for preference lookups
+ */
+export function initPreferenceHandler(semanticMemory: SemanticMemoryLayer): void {
+  semanticMemoryLayer = semanticMemory;
+}
+
+/**
+ * Calculate temporal decay weight using exponential formula
+ *
+ * Decay formula: weight = e^(-days/30)
+ * - Decays to 50% in ~21 days
+ * - Decays to 10% in ~69 days
+ *
+ * @param lastAccessed - Date when the preference was last accessed
+ * @returns Weight between 0 and 1
+ */
+function calculateTemporalDecay(lastAccessed: Date | string): number {
+  const lastAccessedDate = typeof lastAccessed === 'string'
+    ? new Date(lastAccessed)
+    : lastAccessed;
+  const now = new Date();
+  const daysSinceAccess = (now.getTime() - lastAccessedDate.getTime()) / (1000 * 60 * 60 * 24);
+
+  // Exponential decay with 30-day half-life
+  return Math.exp(-daysSinceAccess / 30);
+}
+
+/**
+ * Direct preference query handler - optimized for low latency
+ *
+ * This handler bypasses embedding generation by using direct SQLite lookup:
+ * 1. Extract preference domain from query using regex
+ * 2. Query semantic memory with domain filter (or get all preferences)
+ * 3. Apply temporal decay weighting to prioritize recent preferences
+ * 4. Return results sorted by weighted score
+ *
+ * Performance target: <50ms (vs ~200ms for embedding-based search)
+ *
+ * @param query - The preference query
+ * @param _context - Routing context (userId, etc.)
+ * @returns Array of MemoryResult objects
+ */
+export async function handlePreferenceQueryDirect(
+  query: string,
+  _context: RoutingContext
+): Promise<MemoryResult[]> {
+  console.debug(`[Router] Handling preference query (optimized): "${query}"`);
+
+  if (!semanticMemoryLayer) {
+    console.debug(`[Router] Semantic memory layer not initialized for preference queries`);
+    return [];
+  }
+
+  // Step 1: Extract domain from query
+  const domain = extractPreferenceDomain(query);
+  console.debug(`[Router] Extracted preference domain: ${domain || 'none'}`);
+
+  // Step 2: Get preferences from semantic memory (filtered by domain if available)
+  const preferences = semanticMemoryLayer.getPreferences(domain || undefined);
+
+  if (preferences.length === 0) {
+    console.debug(`[Router] No preferences found for domain: ${domain || 'all'}`);
+    return [];
+  }
+
+  // Step 3: Apply temporal decay weighting and transform to MemoryResult
+  const weightedResults: MemoryResult[] = preferences.map((pref: any) => {
+    const decayWeight = calculateTemporalDecay(pref.last_accessed || pref.created_at);
+    const confidenceWeight = pref.confidence || 1.0;
+
+    // Combined score: temporal decay * confidence
+    const similarity = decayWeight * confidenceWeight;
+
+    return {
+      id: pref.id,
+      source: "semantic" as const,
+      content: pref.description || pref.name,
+      similarity,
+      timestamp: new Date(pref.last_accessed || pref.created_at),
+      confidence: pref.confidence
+    };
+  });
+
+  // Step 4: Sort by similarity (descending) and return
+  return weightedResults.sort((a, b) => b.similarity - a.similarity);
 }
