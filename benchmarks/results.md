@@ -1,6 +1,6 @@
 # Vesper Memory System - Benchmark Results
 
-Generated: 2026-02-02T21:06:52.763Z
+Generated: 2026-02-02T21:34:47.920Z
 
 ## Summary
 
@@ -10,9 +10,9 @@ Scientific testing demonstrates concrete performance improvements when using Ves
 
 | Metric | Without Memory | With Vesper | Improvement | Unit |
 |--------|---------------|-------------|-------------|------|
-| Query Latency (P50) | 5.1 | 0.7 | **+85.9%** | ms |
-| Query Latency (P95) | 8.5 | 2.2 | **+74.3%** | ms |
-| Query Latency (P99) | 10.8 | 4.5 | **+58.7%** | ms |
+| Query Latency (P50) | 5.1 | 1.0 | **+80.5%** | ms |
+| Query Latency (P95) | 9.0 | 3.5 | **+61.7%** | ms |
+| Query Latency (P99) | 11.4 | 8.4 | **+26.7%** | ms |
 | Retrieval Accuracy | 0.0 | 100.0 | **+100.0%** | % |
 | Context Retention | 2.0 | 100.0 | **+4900.0%** | % |
 | Token Efficiency | 500000.0 | 50000.0 | **+90.0%** | tokens |
@@ -23,26 +23,26 @@ Scientific testing demonstrates concrete performance improvements when using Ves
 ### 🚀 Query Latency (P50)
 
 - **Without Memory**: 5.1 ms
-- **With Vesper**: 0.7 ms
-- **Improvement**: +85.9%
+- **With Vesper**: 1.0 ms
+- **Improvement**: +80.5%
 
-Queries are 86% faster with memory, reducing wait time and improving responsiveness. This compounds across sessions for significant UX gains.
+Queries are 80% faster with memory, reducing wait time and improving responsiveness. This compounds across sessions for significant UX gains.
 
 ### 🚀 Query Latency (P95)
 
-- **Without Memory**: 8.5 ms
-- **With Vesper**: 2.2 ms
-- **Improvement**: +74.3%
+- **Without Memory**: 9.0 ms
+- **With Vesper**: 3.5 ms
+- **Improvement**: +61.7%
 
-Queries are 74% faster with memory, reducing wait time and improving responsiveness. This compounds across sessions for significant UX gains.
+Queries are 62% faster with memory, reducing wait time and improving responsiveness. This compounds across sessions for significant UX gains.
 
-### 🚀 Query Latency (P99)
+### ✅ Query Latency (P99)
 
-- **Without Memory**: 10.8 ms
-- **With Vesper**: 4.5 ms
-- **Improvement**: +58.7%
+- **Without Memory**: 11.4 ms
+- **With Vesper**: 8.4 ms
+- **Improvement**: +26.7%
 
-Queries are 59% faster with memory, reducing wait time and improving responsiveness. This compounds across sessions for significant UX gains.
+Queries are 27% faster with memory, reducing wait time and improving responsiveness. This compounds across sessions for significant UX gains.
 
 ### 🚀 Retrieval Accuracy
 
@@ -90,7 +90,7 @@ All tests run on production-equivalent infrastructure (Redis, SQLite, semantic s
 ## Conclusion
 
 Vesper provides measurable, scientifically validated improvements across all key metrics:
-- **Faster**: 74% latency reduction
+- **Faster**: 62% latency reduction
 - **Smarter**: 100% retrieval accuracy
 - **Persistent**: 100% context retention
 - **Efficient**: 90% token savings

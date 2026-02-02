@@ -1,8 +1,8 @@
 # Vesper Accuracy Benchmark Report
 
-**Generated:** 2026-02-02T21:11:37.190Z
-**Benchmark ID:** accuracy-67ce8d83
-**Duration:** 11.7s
+**Generated:** 2026-02-02T22:21:28.708Z
+**Benchmark ID:** accuracy-c7e5214a
+**Duration:** 11.1s
 
 ## Executive Summary
 
@@ -11,9 +11,9 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 
 ### Verdict: **STRONG IMPROVEMENT**
 
-- **Enabled F1 Score:** 93.8%
+- **Enabled F1 Score:** 98.5%
 - **Disabled F1 Score:** 2.0%
-- **Improvement:** +4592.3%
+- **Improvement:** +4823.1%
 - **Statistically Significant:** Yes (p < 0.05)
 
 > Vesper memory provides STRONG value. Enabled mode significantly outperforms disabled mode with high accuracy and statistical significance.
@@ -22,8 +22,8 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 
 | Metric | Vesper Enabled | Vesper Disabled | Improvement |
 | --- | --- | --- | --- |
-| Average Accuracy | 94.0% | 2.0% | +92.0% |
-| F1 Score | 93.8% | 2.0% | +91.8% |
+| Average Accuracy | 98.0% | 2.0% | +96.0% |
+| F1 Score | 98.5% | 2.0% | +96.5% |
 | Memory Hit Rate | 100.0% | N/A | - |
 
 ## Results by Scenario
@@ -39,7 +39,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 | Recall | 100.0% | 10.0% | +90.0% |
 | F1 Score | 100.0% | 10.0% | +90.0% |
 | Memory Hit Rate | 100.0% | N/A | - |
-| Avg Latency | 155.0ms | 0.0ms | - |
+| Avg Latency | 163.5ms | 0.0ms | - |
 
 **Statistical Analysis:**
 - p-value: 0.0000
@@ -57,7 +57,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 | Recall | 100.0% | 0.0% | +100.0% |
 | F1 Score | 100.0% | 0.0% | +100.0% |
 | Memory Hit Rate | 100.0% | N/A | - |
-| Avg Latency | 226.2ms | 0.0ms | - |
+| Avg Latency | 204.4ms | 0.0ms | - |
 
 **Statistical Analysis:**
 - p-value: 0.0000
@@ -75,7 +75,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 | Recall | 100.0% | 0.0% | +100.0% |
 | F1 Score | 100.0% | 0.0% | +100.0% |
 | Memory Hit Rate | 100.0% | N/A | - |
-| Avg Latency | 182.2ms | 0.0ms | - |
+| Avg Latency | 160.6ms | 0.0ms | - |
 
 **Statistical Analysis:**
 - p-value: 0.0000
@@ -88,17 +88,17 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 
 | Metric | Enabled | Disabled | Delta |
 | --- | --- | --- | --- |
-| Accuracy | 70.0% | 0.0% | +70.0% |
-| Precision | 69.2% | 0.0% | +69.2% |
-| Recall | 69.2% | 0.0% | +69.2% |
-| F1 Score | 69.2% | 0.0% | +69.2% |
+| Accuracy | 90.0% | 0.0% | +90.0% |
+| Precision | 92.3% | 0.0% | +92.3% |
+| Recall | 92.3% | 0.0% | +92.3% |
+| F1 Score | 92.3% | 0.0% | +92.3% |
 | Memory Hit Rate | 100.0% | N/A | - |
-| Avg Latency | 210.4ms | 0.0ms | - |
+| Avg Latency | 173.4ms | 0.0ms | - |
 
 **Statistical Analysis:**
 - p-value: 0.0000
 - Significant (p < 0.05): Yes
-- Effect Size (Cohen's d): 3.615 (large)
+- Effect Size (Cohen's d): 5.692 (large)
 
 ### Contradiction
 
@@ -111,7 +111,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 | Recall | 100.0% | 0.0% | +100.0% |
 | F1 Score | 100.0% | 0.0% | +100.0% |
 | Memory Hit Rate | 100.0% | N/A | - |
-| Avg Latency | 109.5ms | 0.0ms | - |
+| Avg Latency | 92.5ms | 0.0ms | - |
 
 **Statistical Analysis:**
 - p-value: 0.0000
@@ -132,7 +132,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 
 | Mode | Response | Keywords Found | Accuracy |
 | --- | --- | --- | --- |
-| Enabled | User prefers to be called Dave (not David). This is an impor... | David | 100% |
+| Enabled | The user's name is David and they are based in San Francisco | David | 100% |
 | Disabled | No information available - memory is disabled. | none | 0% |
 
 #### factual-2
@@ -145,7 +145,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 
 | Mode | Response | Keywords Found | Accuracy |
 | --- | --- | --- | --- |
-| Enabled | The user is collaborating with Claude on this project | The ... | Vesper, memory | 100% |
+| Enabled | The project is called Vesper, which is a memory system for A... | Vesper, memory | 100% |
 | Disabled | No information available - memory is disabled. | memory | 50% |
 
 #### preference-1
@@ -158,7 +158,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 
 | Mode | Response | Keywords Found | Accuracy |
 | --- | --- | --- | --- |
-| Enabled | The user prefers functional programming style over object-or... | TypeScript, type, safety | 100% |
+| Enabled | I prefer TypeScript over JavaScript because of type safety |... | TypeScript, type, safety | 100% |
 | Disabled | No information available - memory is disabled. | none | 0% |
 
 #### preference-2
@@ -184,7 +184,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 
 | Mode | Response | Keywords Found | Accuracy |
 | --- | --- | --- | --- |
-| Enabled | Last week we decided to use Qdrant for vector storage | Proj... | Qdrant, vector | 100% |
+| Enabled | Last week we decided to use Qdrant for vector storage | The ... | Qdrant, vector | 100% |
 | Disabled | No information available - memory is disabled. | none | 0% |
 
 #### temporal-2
@@ -210,7 +210,7 @@ not just latency. It answers: *Does having memory make responses more accurate?*
 
 | Mode | Response | Keywords Found | Accuracy |
 | --- | --- | --- | --- |
-| Enabled | The Vesper project uses MCP protocol | Working style with Da... | MCP, Protocol | 50% |
+| Enabled | The Vesper project uses MCP protocol | The project is called... | MCP, Model, Context, Protocol | 100% |
 | Disabled | No information available - memory is disabled. | none | 0% |
 
 #### multihop-2

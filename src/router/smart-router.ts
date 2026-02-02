@@ -8,6 +8,20 @@
  * 4. Fall back to hybrid search for complex queries
  */
 
+import { WorkingMemoryLayer } from '../memory-layers/working-memory.js';
+
+/**
+ * Module-level dependency - set via init()
+ */
+let workingMemoryLayer: WorkingMemoryLayer | null = null;
+
+/**
+ * Initialize the router with dependencies
+ */
+export function init(deps: { workingMemory?: WorkingMemoryLayer }): void {
+  workingMemoryLayer = deps.workingMemory || null;
+}
+
 /**
  * Query type enumeration
  * Used to classify queries and route to appropriate handlers
@@ -256,13 +270,28 @@ async function checkWorkingMemory(
 ): Promise<MemoryResult[]> {
   console.debug(`[Router] Checking working memory for: "${query}"`);
 
-  // TODO: Implement Redis working memory search with Hopfield network
-  // - Get user's working memory from Redis
-  // - Embed query using BGE-large
-  // - Perform Hopfield associative recall
-  // - Return top-K matches with similarity scores
+  // Early return if working memory not available
+  if (!workingMemoryLayer) {
+    console.debug(`[Router] Working memory layer not initialized`);
+    return [];
+  }
 
-  return [];
+  try {
+    // Search working memory using keyword matching (5ms fast path)
+    const results = await workingMemoryLayer.search(query, 3);
+
+    // Transform to MemoryResult format
+    return results.map(r => ({
+      id: r.memory.conversationId,
+      source: "working" as const,
+      content: r.memory.fullText,
+      similarity: r.similarity,
+      timestamp: r.memory.timestamp,
+    }));
+  } catch (err) {
+    console.error(`[Router] Working memory search error:`, err);
+    return [];
+  }
 }
 
 /**

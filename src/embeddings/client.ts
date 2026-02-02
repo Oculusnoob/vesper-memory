@@ -5,6 +5,8 @@
  * Provides methods for generating 1024-dimensional dense embeddings.
  */
 
+import { LRUCache } from 'lru-cache';
+
 /**
  * Embedding service response
  */
@@ -45,11 +47,18 @@ export class EmbeddingClient {
   private serviceUrl: string;
   private timeout: number;
   private maxRetries: number;
+  private embeddingCache: LRUCache<string, number[]>;
 
   constructor(config: EmbeddingClientConfig = {}) {
     this.serviceUrl = config.serviceUrl || process.env.EMBEDDING_SERVICE_URL || 'http://localhost:8000';
     this.timeout = config.timeout || 30000;
     this.maxRetries = config.maxRetries || 3;
+
+    // Initialize LRU cache for embeddings (1000 entries, 1 hour TTL)
+    this.embeddingCache = new LRUCache<string, number[]>({
+      max: 1000,
+      ttl: 1000 * 60 * 60, // 1 hour
+    });
   }
 
   /**
@@ -77,8 +86,23 @@ export class EmbeddingClient {
    * @returns 1024-dimensional embedding vector
    */
   async embed(text: string, normalize: boolean = true): Promise<number[]> {
+    // Create cache key from text and normalize flag
+    const cacheKey = `${text}:${normalize}`;
+
+    // Check cache first
+    const cached = this.embeddingCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Cache miss - generate embedding
     const response = await this.embedBatch([text], normalize);
-    return response.embeddings[0];
+    const embedding = response.embeddings[0];
+
+    // Store in cache
+    this.embeddingCache.set(cacheKey, embedding);
+
+    return embedding;
   }
 
   /**

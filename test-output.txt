@@ -1,0 +1,610 @@
+
+> vesper-memory@0.1.0 test
+> vitest --reporter=verbose --run
+
+[dotenv@17.2.3] injecting env (18) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+
+ RUN  v1.6.1 /Users/fitzy/Documents/MemoryProject
+
+stdout | tests/router.test.ts > Query Routing (retrieve) > Routing behavior > should accept valid query and context
+[Router] Checking working memory for: "What is X?"
+[Router] Query classified as factual (confidence: 0.95, pattern: factual_wh)
+[Router] Handling factual query: "What is X?"
+
+ ✓ tests/router.test.ts > Query Classification > Factual queries > should classify 'What is X?' as factual
+ ✓ tests/router.test.ts > Query Classification > Factual queries > should classify 'Who is X?' as factual
+ ✓ tests/router.test.ts > Query Classification > Factual queries > should classify 'Where is X?' as factual
+ ✓ tests/router.test.ts > Query Classification > Factual queries > should classify 'What was X?' with temporal keyword as temporal
+ ✓ tests/router.test.ts > Query Classification > Preference queries > should classify preference queries with 'prefer'
+ ✓ tests/router.test.ts > Query Classification > Preference queries > should classify preference queries with 'like'
+ ✓ tests/router.test.ts > Query Classification > Preference queries > should classify preference queries with 'want'
+ ✓ tests/router.test.ts > Query Classification > Preference queries > should classify preference queries with 'style'
+ ✓ tests/router.test.ts > Query Classification > Preference queries > should classify preference queries with 'favorite'
+ ✓ tests/router.test.ts > Query Classification > Project queries > should classify project queries with 'project'
+ ✓ tests/router.test.ts > Query Classification > Project queries > should classify project queries with 'working on'
+ ✓ tests/router.test.ts > Query Classification > Project queries > should classify project queries with 'decided'
+ ✓ tests/router.test.ts > Query Classification > Project queries > should classify project queries with 'building'
+ ✓ tests/router.test.ts > Query Classification > Project queries > should classify project queries with 'creating'
+ ✓ tests/router.test.ts > Query Classification > Project queries > should classify project queries with 'developing'
+ ✓ tests/router.test.ts > Query Classification > Temporal queries > should classify temporal queries with 'last week'
+ ✓ tests/router.test.ts > Query Classification > Temporal queries > should classify temporal queries with 'yesterday'
+ ✓ tests/router.test.ts > Query Classification > Temporal queries > should classify temporal queries with 'recently'
+ ✓ tests/router.test.ts > Query Classification > Temporal queries > should classify temporal queries with 'last month'
+ ✓ tests/router.test.ts > Query Classification > Temporal queries > should classify temporal queries with 'last year'
+ ✓ tests/router.test.ts > Query Classification > Temporal queries > should classify temporal queries with 'last time'
+ ✓ tests/router.test.ts > Query Classification > Temporal queries > should classify temporal queries with 'earlier'
+ ✓ tests/router.test.ts > Query Classification > Temporal queries > should classify temporal queries with 'before'
+ ✓ tests/router.test.ts > Query Classification > Skill queries > should classify skill queries with 'like before'
+ ✓ tests/router.test.ts > Query Classification > Skill queries > should classify skill queries with 'same as'
+ ✓ tests/router.test.ts > Query Classification > Skill queries > should classify skill queries with 'analyze'
+ ✓ tests/router.test.ts > Query Classification > Skill queries > should classify skill queries with 'same way'
+ ✓ tests/router.test.ts > Query Classification > Skill queries > should classify skill queries with 'how you'
+ ✓ tests/router.test.ts > Query Classification > Complex queries (fallback) > should classify ambiguous queries as complex
+ ✓ tests/router.test.ts > Query Classification > Complex queries (fallback) > should classify vague queries as complex
+ ✓ tests/router.test.ts > Query Classification > Complex queries (fallback) > should classify empty-ish queries as complex
+ ✓ tests/router.test.ts > Query Classification > Pattern matching metadata > should include matched pattern in classification result
+ ✓ tests/router.test.ts > Query Classification > Pattern matching metadata > should not include pattern for complex queries
+ ✓ tests/router.test.ts > Query Classification > Case insensitivity > should handle uppercase queries
+ ✓ tests/router.test.ts > Query Classification > Case insensitivity > should handle mixed case queries
+ ✓ tests/router.test.ts > Query Classification > Whitespace handling > should handle leading/trailing whitespace
+ ✓ tests/router.test.ts > Query Classification > Whitespace handling > should handle extra internal whitespace
+ ✓ tests/router.test.ts > Query Routing (retrieve) > Input validation > should throw on empty query
+ ✓ tests/router.test.ts > Query Routing (retrieve) > Input validation > should throw on whitespace-only query
+ ✓ tests/router.test.ts > Query Routing (retrieve) > Input validation > should throw on missing userId
+ ✓ tests/router.test.ts > Query Routing (retrieve) > Input validation > should throw on missing context
+ ✓ tests/router.test.ts > Query Routing (retrieve) > Routing behavior > should accept valid query and context
+ ✓ tests/router.test.ts > Helper functions > extractEntityName > should return null for now (stub implementation)
+ ✓ tests/router.test.ts > Helper functions > extractDomain > should return null for now (stub implementation)
+ ✓ tests/router.test.ts > Helper functions > parseTimeRange > should return null for now (stub implementation)
+ ✓ tests/skill-library.test.ts > SkillLibrary > Skill Creation > should add a new skill
+ ✓ tests/skill-library.test.ts > SkillLibrary > Skill Creation > should initialize with default metrics
+ ✓ tests/skill-library.test.ts > SkillLibrary > Skill Creation > should store triggers as JSON
+ ✓ tests/skill-library.test.ts > SkillLibrary > Skill Search > should find skills by trigger match
+ ✓ tests/skill-library.test.ts > SkillLibrary > Skill Search > should find skills by partial trigger match
+ ✓ tests/skill-library.test.ts > SkillLibrary > Skill Search > should find skills by name match
+ ✓ tests/skill-library.test.ts > SkillLibrary > Skill Search > should return empty array for no matches
+ ✓ tests/skill-library.test.ts > SkillLibrary > Skill Search > should respect limit parameter
+ ✓ tests/skill-library.test.ts > SkillLibrary > Skill Search > should rank by satisfaction score
+ ✓ tests/skill-library.test.ts > SkillLibrary > Skill Search > should handle case-insensitive search
+ ✓ tests/skill-library.test.ts > SkillLibrary > Success Tracking > should increment success count
+ ✓ tests/skill-library.test.ts > SkillLibrary > Success Tracking > should update average satisfaction
+ ✓ tests/skill-library.test.ts > SkillLibrary > Success Tracking > should handle multiple successes
+ ✓ tests/skill-library.test.ts > SkillLibrary > Success Tracking > should handle satisfaction values at boundaries
+ ✓ tests/skill-library.test.ts > SkillLibrary > Success Tracking > should ignore success for non-existent skill
+ ✓ tests/skill-library.test.ts > SkillLibrary > Failure Tracking > should increment failure count
+ ✓ tests/skill-library.test.ts > SkillLibrary > Failure Tracking > should not affect satisfaction on failure
+ ✓ tests/skill-library.test.ts > SkillLibrary > Failure Tracking > should handle multiple failures
+ ✓ tests/skill-library.test.ts > SkillLibrary > Skill Ranking > should rank by success count when satisfaction is equal
+ ✓ tests/skill-library.test.ts > SkillLibrary > Skill Ranking > should prioritize satisfaction over success count
+ ✓ tests/skill-library.test.ts > SkillLibrary > Edge Cases > should handle empty triggers array
+ ✓ tests/skill-library.test.ts > SkillLibrary > Edge Cases > should handle special characters in triggers
+ ✓ tests/skill-library.test.ts > SkillLibrary > Edge Cases > should handle very long skill names
+ ✓ tests/skill-library.test.ts > SkillLibrary > Edge Cases > should handle concurrent skill additions
+ ✓ tests/skill-library.test.ts > SkillLibrary > Edge Cases > should handle queries with only whitespace
+ ✓ tests/skill-library.test.ts > SkillLibrary > Edge Cases > should return triggers in search results
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Health Check > should check health successfully
+stderr | tests/benchmarks/memory-performance.test.ts > Memory System Performance Benchmarks
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > store and retrieve > should store a conversation and retrieve it
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Temporal Overlap Detection > should detect overlapping temporal facts
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Temporal Overlap Detection > should not detect non-overlapping periods
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Temporal Overlap Detection > should detect partial overlaps
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Temporal Overlap Detection > should handle open-ended periods (null valid_until)
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Direct Contradiction Detection > should detect conflicting current facts
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Direct Contradiction Detection > should not detect historical vs current as contradiction
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Direct Contradiction Detection > should detect multiple contradictions
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Direct Contradiction Detection > should only compare facts from same entity
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Preference Shift Detection > should detect preference changes over time
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Preference Shift Detection > should not detect recent preference additions as shifts
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Preference Shift Detection > should only compare preferences with same description
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Preference Shift Detection > should include time difference in description
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Conflict Storage > should store detected conflict
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Conflict Storage > should lower confidence on both conflicting facts
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Conflict Storage > should set resolution status to flagged
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Edge Cases > should handle no conflicts gracefully
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Edge Cases > should handle same value in overlapping periods (not a conflict)
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Edge Cases > should handle multiple conflict types for same facts
+ ✓ tests/conflict-detector.test.ts > ConflictDetector > Edge Cases > should generate unique conflict IDs
+stderr | tests/benchmarks/memory-performance.test.ts > Memory System Performance Benchmarks
+<empty line>
+stdout | tests/benchmarks/memory-performance.test.ts > Memory System Performance Benchmarks
+✅ Redis connected - all benchmarks will run
+
+
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Entity Management > should create a new entity
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Entity Management > should update existing entity on re-insert
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Entity Management > should retrieve entity by name
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Entity Management > should return null for non-existent entity
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Entity Management > should handle different entity types
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Entity Management > should track entity access count
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Entity Management > should update last_accessed timestamp
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Relationship Management > should create a relationship between entities
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Relationship Management > should strengthen existing relationship on re-insert
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Relationship Management > should cap relationship strength at 1.0
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Relationship Management > should allow multiple relationship types between same entities
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Personalized PageRank > should traverse graph starting from entity
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Personalized PageRank > should rank results by relevance
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Personalized PageRank > should respect depth parameter
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Personalized PageRank > should filter low-relevance nodes
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Temporal Decay > should apply decay to old relationships
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Temporal Decay > should delete very weak relationships
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Temporal Decay > should keep recent relationships strong
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Preference Queries > should retrieve all preferences
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Preference Queries > should filter preferences by domain
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Preference Queries > should return empty array when no preferences exist
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Time-based Queries > should retrieve entities by time range
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Time-based Queries > should filter by start date only
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Time-based Queries > should filter by end date only
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Time-based Queries > should limit results to 20
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Time-based Queries > should order by created_at DESC
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Edge Cases > should handle empty entity name gracefully
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Edge Cases > should handle invalid confidence values
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Edge Cases > should handle circular relationships
+ ✓ tests/semantic-memory.test.ts > SemanticMemoryLayer > Edge Cases > should handle self-referential relationships
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should consolidate working memory to semantic memory
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > store and retrieve > should store a conversation and retrieve it
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > store and retrieve > should return null for non-existent conversation
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should consolidate working memory to semantic memory
+[CONSOLIDATION] Starting consolidation cycle...
+
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > store and retrieve > should return null for non-existent conversation
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > store and retrieve > should return null for non-existent conversation
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should consolidate working memory to semantic memory
+[CONSOLIDATION] Complete! Processed 1 memories in 23ms
+[CONSOLIDATION] Extracted 3 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > search > should search by text keywords
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should consolidate working memory to semantic memory
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should extract entities from key entities field
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should extract entities from key entities field
+[CONSOLIDATION] Starting consolidation cycle...
+
+ ✓ tests/qdrant.test.ts > Qdrant Health Check > should respond to healthz endpoint with 200
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should extract entities from key entities field
+[CONSOLIDATION] Complete! Processed 1 memories in 6ms
+[CONSOLIDATION] Extracted 2 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should extract entities from key entities field
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should extract preferences from text patterns
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/qdrant.test.ts > Qdrant API Key Authentication > should create client with API key configuration
+Api key is used with unsecure connection.
+
+stderr | tests/qdrant.test.ts > Qdrant API Key Authentication > should connect successfully with valid API key
+Api key is used with unsecure connection.
+
+ ✓ tests/qdrant.test.ts > Qdrant Health Check > should return version info from root endpoint
+ ✓ tests/qdrant.test.ts > Qdrant Health Check > should have readiness endpoint available
+ ✓ tests/qdrant.test.ts > Qdrant Health Check > should return healthz check passed message
+ ✓ tests/qdrant.test.ts > Qdrant API Key Authentication > should create client with API key configuration
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should extract preferences from text patterns
+[CONSOLIDATION] Starting consolidation cycle...
+
+ ✓ tests/qdrant.test.ts > Qdrant API Key Authentication > should connect successfully with valid API key
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > search > should search by entities
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should extract preferences from text patterns
+[CONSOLIDATION] Complete! Processed 1 memories in 7ms
+[CONSOLIDATION] Extracted 2 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should handle empty working memory
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should handle empty working memory
+[CONSOLIDATION] Starting consolidation cycle...
+[CONSOLIDATION] Complete! Processed 0 memories in 1ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > search > should search by text keywords
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should return consolidation statistics
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should return consolidation statistics
+[CONSOLIDATION] Starting consolidation cycle...
+
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should extract preferences from text patterns
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should handle empty working memory
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should return consolidation statistics
+[CONSOLIDATION] Complete! Processed 1 memories in 6ms
+[CONSOLIDATION] Extracted 1 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > search > should search by topics
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Temporal Decay > should apply temporal decay during consolidation
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Basic Consolidation > should return consolidation statistics
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > search > should search by entities
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Temporal Decay > should apply temporal decay during consolidation
+[CONSOLIDATION] Starting consolidation cycle...
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Temporal Decay > should apply temporal decay during consolidation
+[CONSOLIDATION] Complete! Processed 0 memories in 1ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Conflict Detection > should detect conflicts during consolidation
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Conflict Detection > should detect conflicts during consolidation
+[CONSOLIDATION] Starting consolidation cycle...
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Conflict Detection > should detect conflicts during consolidation
+[CONSOLIDATION] Complete! Processed 0 memories in 4ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 1 conflicts, pruned 0 memories
+
+stderr | tests/integration.test.ts > Working Memory Layer > should store and retrieve memories
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/qdrant.test.ts > Qdrant API Key Authentication > should include API key in HybridSearchEngine configuration
+Api key is used with unsecure connection.
+
+stderr | tests/qdrant.test.ts > Qdrant Collection Management
+Api key is used with unsecure connection.
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Conflict Detection > should lower confidence on conflicting facts
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Conflict Detection > should lower confidence on conflicting facts
+[CONSOLIDATION] Starting consolidation cycle...
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Conflict Detection > should lower confidence on conflicting facts
+[CONSOLIDATION] Complete! Processed 0 memories in 2ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 1 conflicts, pruned 0 memories
+
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > search > should return top K results
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Conflict Detection > should not create duplicate conflict entries
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Conflict Detection > should not create duplicate conflict entries
+[CONSOLIDATION] Starting consolidation cycle...
+[CONSOLIDATION] Complete! Processed 0 memories in 1ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 1 conflicts, pruned 0 memories
+[CONSOLIDATION] Starting consolidation cycle...
+[CONSOLIDATION] Complete! Processed 0 memories in 1ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+ ✓ tests/qdrant.test.ts > Qdrant API Key Authentication > should include API key in HybridSearchEngine configuration
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > search > should search by topics
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Memory Pruning > should prune low-strength relationships
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/integration.test.ts > Working Memory Layer > should limit to 5 conversations
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Memory Pruning > should prune low-strength relationships
+[CONSOLIDATION] Starting consolidation cycle...
+[CONSOLIDATION] Complete! Processed 0 memories in 1ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 1 memories
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Memory Pruning > should keep relationships with high access count
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Memory Pruning > should keep relationships with high access count
+[CONSOLIDATION] Starting consolidation cycle...
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Memory Pruning > should keep relationships with high access count
+[CONSOLIDATION] Complete! Processed 0 memories in 1ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+ ✓ tests/integration.test.ts > Working Memory Layer > should store and retrieve memories
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > search > should rank results by similarity
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Skill Extraction > should extract skills from analysis topics
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > search > should return top K results
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Skill Extraction > should extract skills from analysis topics
+[CONSOLIDATION] Starting consolidation cycle...
+
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Temporal Decay > should apply temporal decay during consolidation
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Conflict Detection > should detect conflicts during consolidation
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Conflict Detection > should lower confidence on conflicting facts
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Conflict Detection > should not create duplicate conflict entries
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Memory Pruning > should prune low-strength relationships
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Memory Pruning > should keep relationships with high access count
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Skill Extraction > should extract skills from analysis topics
+[CONSOLIDATION] Complete! Processed 1 memories in 5ms
+[CONSOLIDATION] Extracted 1 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Skill Extraction > should not duplicate existing skills
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/qdrant-wait-parameter.test.ts > Qdrant Wait Parameter Fix - Race Condition Prevention
+Api key is used with unsecure connection.
+Api key is used with unsecure connection.
+
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Skill Extraction > should extract skills from analysis topics
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Skill Extraction > should not duplicate existing skills
+[CONSOLIDATION] Starting consolidation cycle...
+
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > getAll > should return all conversations in order
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Skill Extraction > should not duplicate existing skills
+[CONSOLIDATION] Complete! Processed 1 memories in 2ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Backup Creation > should create backup metadata
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Backup Creation > should create backup metadata
+[CONSOLIDATION] Starting consolidation cycle...
+
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > search > should rank results by similarity
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Backup Creation > should create backup metadata
+[CONSOLIDATION] Complete! Processed 0 memories in 2ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Backup Creation > should set backup expiration to 7 days
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Backup Creation > should set backup expiration to 7 days
+[CONSOLIDATION] Starting consolidation cycle...
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Backup Creation > should set backup expiration to 7 days
+[CONSOLIDATION] Complete! Processed 0 memories in 1ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Backup Creation > should set backup type to consolidation
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Backup Creation > should set backup type to consolidation
+[CONSOLIDATION] Starting consolidation cycle...
+
+stderr | tests/integration.test.ts > Working Memory Layer > should search by keywords
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Backup Creation > should set backup type to consolidation
+[CONSOLIDATION] Complete! Processed 0 memories in 3ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > getAll > should respect limit parameter
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > getAll > should return all conversations in order
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Error Handling > should handle errors gracefully
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Error Handling > should handle errors gracefully
+[CONSOLIDATION] Starting consolidation cycle...
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Error Handling > should handle errors gracefully
+[CONSOLIDATION] Complete! Processed 1 memories in 3ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+ ✓ tests/integration.test.ts > Working Memory Layer > should limit to 5 conversations
+ ✓ tests/integration.test.ts > Working Memory Layer > should search by keywords
+ ✓ tests/integration.test.ts > Semantic Memory Layer > should upsert entities
+ ✓ tests/integration.test.ts > Semantic Memory Layer > should create relationships
+ ✓ tests/integration.test.ts > Semantic Memory Layer > should perform Personalized PageRank traversal
+ ✓ tests/integration.test.ts > Smart Query Router > should classify factual queries
+ ✓ tests/integration.test.ts > Smart Query Router > should classify preference queries
+ ✓ tests/integration.test.ts > Smart Query Router > should classify project queries
+ ✓ tests/integration.test.ts > Smart Query Router > should classify temporal queries
+ ✓ tests/integration.test.ts > Smart Query Router > should classify skill queries
+ ✓ tests/integration.test.ts > Smart Query Router > should default to complex for ambiguous queries
+ ✓ tests/integration.test.ts > Conflict Detection > should detect direct contradictions
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Error Handling > should continue processing after individual errors
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Error Handling > should continue processing after individual errors
+[CONSOLIDATION] Starting consolidation cycle...
+
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Skill Extraction > should not duplicate existing skills
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Backup Creation > should create backup metadata
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Backup Creation > should set backup expiration to 7 days
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Backup Creation > should set backup type to consolidation
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Error Handling > should handle errors gracefully
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Error Handling > should continue processing after individual errors
+[CONSOLIDATION] Complete! Processed 2 memories in 3ms
+[CONSOLIDATION] Extracted 2 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > auto-eviction > should evict oldest conversation when max capacity exceeded
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Performance > should consolidate 100 memories in reasonable time
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > getAll > should respect limit parameter
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Error Handling > should continue processing after individual errors
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > auto-eviction > should keep the 3 most recent conversations
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > auto-eviction > should evict oldest conversation when max capacity exceeded
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > delete > should delete a conversation
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > statistics > should return empty stats when no conversations
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/working-memory.test.ts > WorkingMemoryLayer > statistics > should calculate stats correctly
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > auto-eviction > should keep the 3 most recent conversations
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > delete > should delete a conversation
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > statistics > should return empty stats when no conversations
+ ✓ tests/working-memory.test.ts > WorkingMemoryLayer > statistics > should calculate stats correctly
+ ✓ tests/qdrant.test.ts > Qdrant Collection Management > should create a collection with correct vector configuration
+ ✓ tests/qdrant.test.ts > Qdrant Collection Management > should verify memory-vectors collection exists after init
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Single Embedding > should generate embedding for single text 669ms
+stderr | tests/qdrant-wait-parameter.test.ts > Qdrant Wait Parameter Fix - Race Condition Prevention
+<empty line>
+stdout | tests/qdrant-wait-parameter.test.ts > Qdrant Wait Parameter Fix - Race Condition Prevention
+Created collection 'test-wait-param-1770049094361' with 1024-dim vectors
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Performance > should consolidate 100 memories in reasonable time
+[CONSOLIDATION] Starting consolidation cycle...
+
+ ✓ tests/qdrant-wait-parameter.test.ts > Qdrant Wait Parameter Fix - Race Condition Prevention > should find upserted vector IMMEDIATELY without any delays
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Performance > should consolidate 100 memories in reasonable time
+[CONSOLIDATION] Complete! Processed 100 memories in 83ms
+[CONSOLIDATION] Extracted 100 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Performance > should report accurate duration
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Performance > should report accurate duration
+[CONSOLIDATION] Starting consolidation cycle...
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Performance > should report accurate duration
+[CONSOLIDATION] Complete! Processed 1 memories in 2ms
+[CONSOLIDATION] Extracted 0 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Integration > should perform full end-to-end consolidation
+[WARN] This Redis server's `default` user does not require a password, but a password was supplied
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Integration > should perform full end-to-end consolidation
+[CONSOLIDATION] Starting consolidation cycle...
+
+stderr | tests/consolidation.test.ts > ConsolidationPipeline > Integration > should perform full end-to-end consolidation
+[CONSOLIDATION] Complete! Processed 2 memories in 2ms
+[CONSOLIDATION] Extracted 5 entities, 0 relationships
+[CONSOLIDATION] Detected 0 conflicts, pruned 0 memories
+
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Performance > should consolidate 100 memories in reasonable time 429ms
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Performance > should report accurate duration
+ ✓ tests/consolidation.test.ts > ConsolidationPipeline > Integration > should perform full end-to-end consolidation
+ ✓ tests/qdrant-wait-parameter.test.ts > Qdrant Wait Parameter Fix - Race Condition Prevention > should find all vectors after rapid sequential upserts without delays
+ ✓ tests/qdrant-wait-parameter.test.ts > Qdrant Wait Parameter Fix - Race Condition Prevention > should find vector via hybridSearch immediately after upsert
+ ✓ tests/qdrant-wait-parameter.test.ts > Qdrant Wait Parameter Fix - Race Condition Prevention > should show updated point count immediately after upsert
+ ✓ tests/qdrant-wait-parameter.test.ts > Qdrant Wait Parameter Fix - Race Condition Prevention > should reflect payload updates immediately
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Single Embedding > should normalize embeddings by default 375ms
+stderr | tests/qdrant-wait-parameter.test.ts > Collection Initialization Wait Parameter > should have collection fully operational immediately after initialization
+Api key is used with unsecure connection.
+Api key is used with unsecure connection.
+
+stderr | tests/qdrant.test.ts > Qdrant Vector Operations
+Api key is used with unsecure connection.
+
+ ✓ tests/qdrant.test.ts > Qdrant Collection Management > should handle collection creation idempotently 407ms
+stderr | tests/qdrant-wait-parameter.test.ts > Collection Initialization Wait Parameter > should have collection fully operational immediately after initialization
+<empty line>
+stdout | tests/qdrant-wait-parameter.test.ts > Collection Initialization Wait Parameter > should have collection fully operational immediately after initialization
+Created collection 'test-init-wait-1770049095021-156dad5a' with 1024-dim vectors
+
+ ✓ tests/qdrant-wait-parameter.test.ts > Collection Initialization Wait Parameter > should have collection fully operational immediately after initialization
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Single Embedding > should handle empty text 328ms
+ ✓ tests/qdrant.test.ts > Qdrant Vector Operations > should upsert a vector with payload
+ ✓ tests/qdrant.test.ts > Qdrant Vector Operations > should search for similar vectors
+ ✓ tests/qdrant.test.ts > Qdrant Vector Operations > should delete a vector
+ ✓ tests/qdrant.test.ts > Qdrant Vector Operations > should handle batch upsert
+stderr | tests/qdrant.test.ts > HybridSearchEngine with API Key
+Api key is used with unsecure connection.
+
+stderr | tests/qdrant.test.ts > HybridSearchEngine with API Key
+<empty line>
+stdout | tests/qdrant.test.ts > HybridSearchEngine with API Key
+Created collection 'test-memory-vectors' with 1024-dim vectors
+
+stdout | tests/qdrant.test.ts > HybridSearchEngine with API Key
+<empty line>
+stderr | tests/qdrant.test.ts > HybridSearchEngine with API Key
+Api key is used with unsecure connection.
+
+ ✓ tests/qdrant.test.ts > HybridSearchEngine with API Key > should initialize collection through engine
+ ✓ tests/qdrant.test.ts > HybridSearchEngine with API Key > should upsert memory through engine
+ ✓ tests/qdrant.test.ts > HybridSearchEngine with API Key > should perform dense search through engine
+ ✓ tests/qdrant.test.ts > HybridSearchEngine with API Key > should reject vectors with wrong dimensions
+stderr | tests/qdrant.test.ts > Init Script Verification > should create memory-vectors collection with correct schema
+Api key is used with unsecure connection.
+
+ ✓ tests/qdrant.test.ts > Init Script Verification > should have init-qdrant script in package.json
+ ✓ tests/qdrant.test.ts > Init Script Verification > should create memory-vectors collection with correct schema
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Single Embedding > should handle long text 1724ms
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Batch Embedding > should generate embeddings for multiple texts
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Batch Embedding > should handle empty batch
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Batch Embedding > should handle single-element batch
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Batch Embedding > should handle large batch 1030ms
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Batch Embedding > should validate embedding dimensions
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Batch Embedding > should validate embedding count
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Large Batch with Auto-Split > should handle large batches with automatic splitting 1869ms
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Large Batch with Auto-Split > should use custom batch size 1069ms
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Error Handling > should retry on failure 3008ms
+ × tests/embeddings.test.ts > EmbeddingClient - Error Handling > should timeout after configured duration 5002ms
+   → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Error Handling > should handle malformed responses
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Configuration > should use custom service URL
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Configuration > should use custom timeout
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Configuration > should use custom max retries
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Configuration > should use environment variable for service URL
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Semantic Properties > should produce similar embeddings for similar texts 712ms
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Semantic Properties > should produce different embeddings for different texts 437ms
+ ✓ tests/embeddings.test.ts > EmbeddingClient - Semantic Properties > should produce consistent embeddings for same text 364ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/benchmarks/memory-performance.test.ts > Memory System Performance Benchmarks
+TypeError: __vite_ssr_import_2__ is not a constructor
+ ❯ tests/benchmarks/memory-performance.test.ts:112:10
+    110|     }
+    111| 
+    112|     db = new Database(":memory:");
+       |          ^
+    113| 
+    114|     // Create schema
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/benchmarks/memory-performance.test.ts > Memory System Performance Benchmarks
+TypeError: Cannot read properties of undefined (reading 'close')
+ ❯ tests/benchmarks/memory-performance.test.ts:149:8
+    147|       await redis.quit();
+    148|     }
+    149|     db.close();
+       |        ^
+    150| 
+    151|     // Save results to file
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/embeddings.test.ts > EmbeddingClient - Error Handling > should timeout after configured duration
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+ Test Files  2 failed | 9 passed (11)
+      Tests  1 failed | 216 passed | 2 skipped (224)
+   Start at  11:18:13
+   Duration  18.08s (transform 647ms, setup 235ms, collect 1.50s, tests 22.01s, environment 1ms, prepare 1.85s)
+

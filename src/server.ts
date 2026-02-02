@@ -31,6 +31,8 @@ import {
 } from "./utils/validation.js";
 import { createEmbeddingClient, EmbeddingClient } from "./embeddings/client.js";
 import { HybridSearchEngine } from "./retrieval/hybrid-search.js";
+import { WorkingMemoryLayer } from "./memory-layers/working-memory.js";
+import * as SmartRouter from "./router/smart-router.js";
 
 // Import better-sqlite3 constructor using createRequire
 const require = createRequire(import.meta.url);
@@ -44,6 +46,7 @@ interface ConnectionPool {
   sqlite?: any; // better-sqlite3 Database instance
   embeddingClient?: EmbeddingClient;
   hybridSearch?: HybridSearchEngine;
+  workingMemory?: WorkingMemoryLayer;
 }
 
 const connections: ConnectionPool = {};
@@ -206,6 +209,10 @@ async function initializeConnections(): Promise<void> {
       );
       await Promise.race([connections.redis.ping(), pingTimeout]);
       console.error("[INFO] ✅ Redis ping successful");
+
+      // Initialize Working Memory Layer
+      connections.workingMemory = new WorkingMemoryLayer(connections.redis, 5);
+      console.error("[INFO] ✅ Working memory layer initialized");
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       console.error(
@@ -307,6 +314,12 @@ async function initializeConnections(): Promise<void> {
       );
       connections.hybridSearch = undefined;
     }
+
+    // Initialize Smart Router with working memory
+    SmartRouter.init({
+      workingMemory: connections.workingMemory,
+    });
+    console.error("[INFO] ✅ Smart router initialized");
 
     // Print service status summary
     console.error("\n" + "=".repeat(60));
