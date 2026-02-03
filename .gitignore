@@ -106,6 +106,7 @@ vesper-article.md
 articles/
 .claude/settings.local.json
 .claude/*.local.json
+logos/
 
 # Auto-generated benchmark results
 benchmarks/results.md
