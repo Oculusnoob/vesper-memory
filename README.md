@@ -6,8 +6,9 @@
 
 Simple, local memory system for Claude Code. No authentication, no complexity - just memory that works.
 
-[![npm version](https://badge.fury.io/js/vesper-memory.svg)](https://www.npmjs.com/package/vesper-memory)
-[![Test Coverage](https://img.shields.io/badge/tests-496%2F496-brightgreen)](.)
+[![npm version](https://img.shields.io/npm/v/vesper-memory.svg)](https://www.npmjs.com/package/vesper-memory)
+[![npm downloads](https://img.shields.io/npm/dm/vesper-memory.svg)](https://www.npmjs.com/package/vesper-memory)
+[![Test Coverage](https://img.shields.io/badge/tests-529%2F529-brightgreen)](.)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](.)
 [![License](https://img.shields.io/badge/license-MIT-blue)](.)
 
