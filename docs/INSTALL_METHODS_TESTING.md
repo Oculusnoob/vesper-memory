@@ -185,7 +185,7 @@ function loadEnvFile(packageRoot: string): Record<string, string> {
 ### Method 3: install.sh (Git Clone) ⚠️ PARTIAL
 
 **Installation Flow:**
-1. User clones repository: `git clone https://github.com/fitz2882/vesper.git ~/.vesper`
+1. User clones repository: `git clone https://github.com/fitz2882/vesper-memory.git ~/.vesper`
 2. User runs: `./install.sh`
 3. Script uses `openssl rand -base64 32` to generate passwords
 4. Uses `sed` to replace placeholders in `.env`
@@ -348,7 +348,7 @@ change-me-to-secure-api-key-32-chars   ❌
 
 **Status:** Cannot be fully tested until repository is published to GitHub
 
-**Reason:** install.sh clones from `https://github.com/fitz2882/vesper.git` which doesn't exist yet
+**Reason:** install.sh clones from `https://github.com/fitz2882/vesper-memory.git` which is the correct repository
 
 **Mitigation:** Code review confirms correct implementation:
 - Uses `openssl rand -base64 32` for password generation

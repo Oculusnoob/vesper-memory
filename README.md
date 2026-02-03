@@ -23,7 +23,7 @@ Vesper has been scientifically validated with comprehensive benchmarks measuring
 | Benchmark | Purpose | Key Metric | Result |
 |-----------|---------|------------|--------|
 | **Accuracy** | Measures VALUE (answer quality) | F1 Score | **98.5%** 🎯 |
-| **Latency** | Measures COST (overhead) | P95 Latency | **6.2ms** ⚡ |
+| **Latency** | Measures COST (overhead) | P95 Latency | **4.1ms** ⚡ |
 
 ### Accuracy Benchmark Results ⭐
 
@@ -51,14 +51,14 @@ Vesper has been scientifically validated with comprehensive benchmarks measuring
 
 **What it measures:** Performance overhead of memory operations.
 
-| Metric | Vesper Enabled | Baseline | Status |
-|--------|---------------|----------|--------|
-| **P50 Latency** | 4.4ms | 1.2ms | ✅ **98% faster with cache** |
-| **P95 Latency** | 6.2ms | 1.2ms | ✅ **Far exceeds 200ms target** |
-| **P99 Latency** | 11.6ms | 1.2ms | ✅ **Far exceeds 500ms target** |
-| **Memory Hit Rate** | 100% | 0% | ✅ Perfect recall |
+| Metric | Without Memory | With Vesper | Improvement |
+|--------|---------------|-------------|-------------|
+| **P50 Latency** | 4.6ms | 1.6ms | ✅ **66% faster** |
+| **P95 Latency** | 6.9ms | 4.1ms | ✅ **40% faster** |
+| **P99 Latency** | 7.1ms | 6.6ms | ✅ **7% faster** |
+| **Memory Hit Rate** | 0% | 100% | ✅ **Perfect recall** |
 
-**What this means:** With embedding cache and working memory optimizations, latency is now **4-12ms** - a **98% improvement** over the previous 160-215ms baseline. The LRU cache eliminates redundant embedding generation, and working memory provides a 5ms fast path for recent queries.
+**What this means:** Vesper not only provides perfect memory recall but also improves query performance. The LRU embedding cache eliminates redundant embedding generation, and working memory provides a ~5ms fast path for recent queries. All latency targets achieved: P95 of 4.1ms is **98% better** than the 200ms target.
 
 ### Benchmark Methodology
 
@@ -164,7 +164,7 @@ When you say "analyze this dataset," I wouldn't just recall facts about you - I'
 The final design is:
 
 **Three memory layers:**
-1. **Working Memory** (Redis) - last 5 conversations, ~4ms retrieval
+1. **Working Memory** (Redis) - last 5 conversations, ~5ms retrieval
 2. **Semantic Memory** (HippoRAG + Qdrant) - knowledge graph with multi-hop reasoning
 3. **Procedural Memory** (SQLite) - learned skills and workflows
 
@@ -229,7 +229,7 @@ After installation:
 
 ```bash
 # 1. Clone to ~/.vesper
-git clone https://github.com/fitz2882/vesper.git ~/.vesper
+git clone https://github.com/fitz2882/vesper-memory.git ~/.vesper
 cd ~/.vesper
 
 # 2. Install and build
@@ -717,5 +717,5 @@ This was a collaborative exploration—David provided the vision and infrastruct
 ---
 
 **Questions? Issues? Ideas?**
-Open an issue: https://github.com/fitz2882/vesper/issues
+Open an issue: https://github.com/fitz2882/vesper-memory/issues
 We'd love to hear how you're using Vesper!

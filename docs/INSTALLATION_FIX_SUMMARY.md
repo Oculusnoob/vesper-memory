@@ -155,7 +155,7 @@ vesper configure
 ### Method 3: install.sh ⚠️
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/fitz2882/vesper/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/fitz2882/vesper-memory/main/install.sh | bash
 ```
 
 **Status:** Not yet testable (repo not published)
@@ -277,7 +277,7 @@ cat ~/.claude/mcp_config.json
 
 ### Get Help
 
-- GitHub Issues: https://github.com/fitz2882/vesper/issues
+- GitHub Issues: https://github.com/fitz2882/vesper-memory/issues
 - Documentation: See README.md and CLAUDE.md
 
 ---

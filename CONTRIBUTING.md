@@ -13,8 +13,8 @@ Thank you for your interest in contributing! This project aims to provide a prod
 
 ```bash
 # Clone the repository
-git clone https://github.com/fitz2882/vesper.git
-cd vesper
+git clone https://github.com/fitz2882/vesper-memory.git
+cd vesper-memory
 
 # Install dependencies
 npm install
@@ -200,8 +200,8 @@ vesper/
 ## Questions?
 
 - **Documentation**: Check [README.md](README.md) and [CLAUDE.md](CLAUDE.md)
-- **Issues**: [GitHub Issues](https://github.com/fitz2882/vesper/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/fitz2882/vesper/discussions)
+- **Issues**: [GitHub Issues](https://github.com/fitz2882/vesper-memory/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/fitz2882/vesper-memory/discussions)
 
 ## Code of Conduct
 

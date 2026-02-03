@@ -277,4 +277,4 @@ If you encounter issues:
 1. Check the troubleshooting section above
 2. Review logs: `docker-compose logs -f`
 3. Check Docker status: `make status`
-4. File an issue: https://github.com/fitz2882/vesper/issues
+4. File an issue: https://github.com/fitz2882/vesper-memory/issues

@@ -13,7 +13,7 @@ Get Vesper running in Claude Code in **2 commands**.
 ### One-Line Install (Recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/fitz2882/vesper/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/fitz2882/vesper-memory/main/install.sh | bash
 ```
 
 This script:
@@ -27,7 +27,7 @@ This script:
 
 ```bash
 # 1. Install Vesper
-git clone https://github.com/fitz2882/vesper.git ~/.vesper
+git clone https://github.com/fitz2882/vesper-memory.git ~/.vesper
 cd ~/.vesper
 npm install
 npm run build
@@ -234,8 +234,8 @@ curl -fsSL https://raw.githubusercontent.com/fitz2882/vesper/main/install.sh | b
 
 - **Read the full docs**: `~/.vesper/README.md`
 - **Configure for production**: See `CONTRIBUTING.md`
-- **Join discussions**: [GitHub Discussions](https://github.com/fitz2882/vesper/discussions)
-- **Report issues**: [GitHub Issues](https://github.com/fitz2882/vesper/issues)
+- **Join discussions**: [GitHub Discussions](https://github.com/fitz2882/vesper-memory/discussions)
+- **Report issues**: [GitHub Issues](https://github.com/fitz2882/vesper-memory/issues)
 
 ## How It Works
 
@@ -254,4 +254,4 @@ When you ask Claude a question:
 
 ---
 
-**Questions?** Ask in [GitHub Discussions](https://github.com/fitz2882/vesper/discussions) or open an issue.
+**Questions?** Ask in [GitHub Discussions](https://github.com/fitz2882/vesper-memory/discussions) or open an issue.

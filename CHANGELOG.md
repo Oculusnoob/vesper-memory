@@ -204,6 +204,6 @@ docker-compose up -d
 - Per user: $0.49-0.73/month (100 users)
 - 97% cost reduction vs. target
 
-[0.3.0]: https://github.com/fitz2882/vesper/releases/tag/v0.3.0
-[0.2.0]: https://github.com/fitz2882/vesper/releases/tag/v0.2.0
-[0.1.0]: https://github.com/fitz2882/vesper/releases/tag/v0.1.0
+[0.3.0]: https://github.com/fitz2882/vesper-memory/releases/tag/v0.3.0
+[0.2.0]: https://github.com/fitz2882/vesper-memory/releases/tag/v0.2.0
+[0.1.0]: https://github.com/fitz2882/vesper-memory/releases/tag/v0.1.0
