@@ -103,6 +103,7 @@ playwright-report/
 
 # Other
 vesper-article.md
+articles/
 .claude/settings.local.json
 .claude/*.local.json
 

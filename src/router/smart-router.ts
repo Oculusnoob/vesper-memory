@@ -10,6 +10,7 @@
 
 import { WorkingMemoryLayer } from '../memory-layers/working-memory.js';
 import { SemanticMemoryLayer } from '../memory-layers/semantic-memory.js';
+import { SkillLibrary } from '../memory-layers/skill-library.js';
 
 /**
  * Module-level dependency - set via init()
@@ -20,6 +21,11 @@ let workingMemoryLayer: WorkingMemoryLayer | null = null;
  * Module-level semantic memory dependency for preference queries
  */
 let semanticMemoryLayer: SemanticMemoryLayer | null = null;
+
+/**
+ * Module-level skill library dependency for skill queries
+ */
+let skillLibraryLayer: SkillLibrary | null = null;
 
 /**
  * Initialize the router with dependencies
@@ -405,9 +411,9 @@ async function handleTemporalQuery(
  * Handle skill queries
  *
  * Pattern: "Analyze this like before", "Same way as last time"
- * Handler: Skill library semantic search
+ * Handler: Skill library trigger-based search
  *
- * Implementation stub
+ * Uses SkillLibrary.search() for fast trigger matching without embedding.
  *
  * @param query - The skill query
  * @param context - Routing context
@@ -415,17 +421,9 @@ async function handleTemporalQuery(
  */
 async function handleSkillQuery(
   query: string,
-  _context: RoutingContext
+  context: RoutingContext
 ): Promise<MemoryResult[]> {
-  console.debug(`[Router] Handling skill query: "${query}"`);
-
-  // TODO: Implement skill query handler
-  // 1. Embed query using BGE-large
-  // 2. Search skill library for matching triggers
-  // 3. Filter by prerequisites being met in context
-  // 4. Return skills ranked by success rate
-
-  return [];
+  return handleSkillQueryDirect(query, context);
 }
 
 /**
@@ -652,4 +650,73 @@ export async function handlePreferenceQueryDirect(
 
   // Step 4: Sort by similarity (descending) and return
   return weightedResults.sort((a, b) => b.similarity - a.similarity);
+}
+
+/**
+ * Initialize the skill handler with skill library dependency
+ *
+ * @param skillLibrary - SkillLibrary instance for skill lookups
+ */
+export function initSkillHandler(skillLibrary: SkillLibrary): void {
+  skillLibraryLayer = skillLibrary;
+}
+
+/**
+ * Direct skill query handler - optimized for low latency
+ *
+ * This handler uses trigger-based matching in SkillLibrary:
+ * 1. Search skill library for matching triggers
+ * 2. Calculate similarity based on match score and satisfaction
+ * 3. Return results sorted by relevance
+ *
+ * Performance target: <20ms
+ *
+ * @param query - The skill query
+ * @param _context - Routing context (userId, etc.)
+ * @returns Array of MemoryResult objects
+ */
+export async function handleSkillQueryDirect(
+  query: string,
+  _context: RoutingContext
+): Promise<MemoryResult[]> {
+  console.debug(`[Router] Handling skill query (optimized): "${query}"`);
+
+  if (!skillLibraryLayer) {
+    console.debug(`[Router] Skill library not initialized for skill queries`);
+    return [];
+  }
+
+  // Early return for empty/whitespace queries
+  if (!query || query.trim().length === 0) {
+    return [];
+  }
+
+  // Search skill library using trigger matching
+  const skills = skillLibraryLayer.search(query, 10);
+
+  if (skills.length === 0) {
+    console.debug(`[Router] No skills found for query: "${query}"`);
+    return [];
+  }
+
+  // Transform to MemoryResult format
+  const results: MemoryResult[] = skills.map((skill) => {
+    // Calculate similarity based on satisfaction and match quality
+    // avgSatisfaction ranges from 0-1, we use it as base similarity
+    const similarity = Math.max(0.1, skill.avgSatisfaction);
+
+    return {
+      id: skill.id,
+      source: "procedural" as const,
+      content: `${skill.name}: ${skill.description}`,
+      similarity,
+      timestamp: new Date(), // Skills don't have timestamps, use current
+      confidence: skill.avgSatisfaction,
+    };
+  });
+
+  console.debug(`[Router] Found ${results.length} matching skills`);
+
+  // Already sorted by skill library (satisfaction + success count)
+  return results;
 }

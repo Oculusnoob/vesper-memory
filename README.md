@@ -402,6 +402,61 @@ System metrics and health status.
 
 ---
 
+## 🎯 Personalizing Memory Storage
+
+Vesper doesn't automatically store every detail - Claude Code decides when to use the `store_memory` tool based on conversation context and user instructions.
+
+### Controlling When Memories Are Stored
+
+You can customize when Vesper stores memories by creating rules in `~/.claude/rules/vesper.md`. This allows you to:
+
+- Define what types of information to remember (preferences, decisions, learning moments)
+- Set the proactivity level (conservative, balanced, aggressive)
+- Provide examples of what to store vs. skip
+- Guide Claude's judgment on what's memorable vs. noise
+
+**Example rule file** (`~/.claude/rules/vesper.md`):
+```markdown
+# Vesper Memory Storage Guidelines
+
+## When to Store Memories
+
+Store meaningful information that would help in future conversations:
+- User preferences and workflow choices
+- Important project decisions and rationale
+- Learning moments (bugs fixed, patterns discovered)
+- Context about projects and goals
+
+## When NOT to Store
+
+Skip trivial details:
+- Temporary session information
+- Obvious programming knowledge
+- Every minor code change
+- Information likely to change frequently
+
+Use judgment - quality over quantity.
+```
+
+### Manual Storage
+
+You can always explicitly ask Claude to store memories:
+```
+"Remember that I prefer TypeScript over JavaScript"
+"Store this decision: we chose PostgreSQL for transaction support"
+"Save this learning: race conditions fixed with mutex pattern"
+```
+
+### Memory Types
+
+- **`episodic`**: Specific events, conversations, problem-solving instances
+- **`semantic`**: Facts, preferences, knowledge, decisions
+- **`procedural`**: Skills, patterns, how-to knowledge
+
+See the [example rules file](https://github.com/fitzypop/vesper/blob/main/.claude/rules/vesper.md) for detailed guidance.
+
+---
+
 ## 📦 Infrastructure
 
 ### Docker Services (3 services)

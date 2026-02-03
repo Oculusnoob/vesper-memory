@@ -28,11 +28,16 @@ import {
   RetrieveMemoryInputSchema,
   ListRecentInputSchema,
   GetStatsInputSchema,
+  RecordSkillOutcomeInputSchema,
 } from "./utils/validation.js";
 import { getSqlitePath, ensureDirectories } from "./utils/paths.js";
 import { createEmbeddingClient, EmbeddingClient } from "./embeddings/client.js";
 import { HybridSearchEngine } from "./retrieval/hybrid-search.js";
 import { WorkingMemoryLayer } from "./memory-layers/working-memory.js";
+import { SemanticMemoryLayer } from "./memory-layers/semantic-memory.js";
+import { SkillLibrary } from "./memory-layers/skill-library.js";
+import { ConsolidationPipeline } from "./consolidation/pipeline.js";
+import { ConsolidationScheduler } from "./scheduler/consolidation-scheduler.js";
 import * as SmartRouter from "./router/smart-router.js";
 
 // Import better-sqlite3 constructor using createRequire
@@ -48,6 +53,10 @@ interface ConnectionPool {
   embeddingClient?: EmbeddingClient;
   hybridSearch?: HybridSearchEngine;
   workingMemory?: WorkingMemoryLayer;
+  semanticMemory?: SemanticMemoryLayer;
+  skillLibrary?: SkillLibrary;
+  consolidationPipeline?: ConsolidationPipeline;
+  consolidationScheduler?: ConsolidationScheduler;
 }
 
 const connections: ConnectionPool = {};
@@ -174,6 +183,30 @@ const TOOLS = [
     inputSchema: {
       type: "object" as const,
       properties: {},
+    },
+  },
+  {
+    name: "record_skill_outcome",
+    description:
+      "Record success or failure feedback for a skill execution. Used to improve skill ranking over time.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        skill_id: {
+          type: "string",
+          description: "The ID of the skill to record feedback for",
+        },
+        outcome: {
+          type: "string",
+          enum: ["success", "failure"],
+          description: "Whether the skill execution was successful or not",
+        },
+        satisfaction: {
+          type: "number",
+          description: "User satisfaction score (0-1). Required for success outcome.",
+        },
+      },
+      required: ["skill_id", "outcome"],
     },
   },
 ];
@@ -327,10 +360,90 @@ async function initializeConnections(): Promise<void> {
       connections.hybridSearch = undefined;
     }
 
-    // Initialize Smart Router with working memory
+    // Initialize Semantic Memory Layer (requires SQLite)
+    if (connections.sqlite) {
+      try {
+        // Initialize semantic memory schema
+        initializeSemanticMemorySchema();
+        connections.semanticMemory = new SemanticMemoryLayer(connections.sqlite);
+        console.error("[INFO] ✅ Semantic memory layer initialized");
+      } catch (err) {
+        console.error(
+          "[WARN] Semantic memory initialization failed:",
+          err instanceof Error ? err.message : String(err)
+        );
+      }
+    }
+
+    // Initialize Skill Library (requires SQLite)
+    if (connections.sqlite) {
+      try {
+        // Initialize skill library schema
+        initializeSkillLibrarySchema();
+        connections.skillLibrary = new SkillLibrary(connections.sqlite);
+        console.error("[INFO] ✅ Skill library initialized");
+      } catch (err) {
+        console.error(
+          "[WARN] Skill library initialization failed:",
+          err instanceof Error ? err.message : String(err)
+        );
+      }
+    }
+
+    // Initialize Consolidation Pipeline (requires all memory layers)
+    if (connections.workingMemory && connections.semanticMemory && connections.skillLibrary && connections.sqlite) {
+      try {
+        connections.consolidationPipeline = new ConsolidationPipeline(
+          connections.workingMemory,
+          connections.semanticMemory,
+          connections.skillLibrary,
+          connections.sqlite
+        );
+        console.error("[INFO] ✅ Consolidation pipeline initialized");
+
+        // Initialize Consolidation Scheduler (3 AM default)
+        connections.consolidationScheduler = new ConsolidationScheduler(
+          connections.consolidationPipeline,
+          { scheduleHour: 3, scheduleMinute: 0 },
+          (stats, error) => {
+            if (error) {
+              console.error("[SCHEDULER] Consolidation failed:", error.message);
+            } else if (stats) {
+              console.error(
+                `[SCHEDULER] Consolidation complete: ${stats.memoriesProcessed} memories, ${stats.skillsExtracted} skills`
+              );
+            }
+          }
+        );
+        connections.consolidationScheduler.start();
+        console.error("[INFO] ✅ Consolidation scheduler started (3 AM daily)");
+      } catch (err) {
+        console.error(
+          "[WARN] Consolidation pipeline initialization failed:",
+          err instanceof Error ? err.message : String(err)
+        );
+      }
+    } else {
+      console.error("[WARN] Consolidation pipeline not initialized (missing dependencies)");
+    }
+
+    // Initialize Smart Router with working memory and skill library
     SmartRouter.init({
       workingMemory: connections.workingMemory,
     });
+
+    // Initialize skill handler in router
+    if (connections.skillLibrary) {
+      SmartRouter.initSkillHandler(connections.skillLibrary);
+      console.error("[INFO] ✅ Smart router skill handler initialized");
+    }
+
+    // Initialize preference handler in router
+    if (connections.semanticMemory) {
+      SmartRouter.initPreferenceHandler(connections.semanticMemory);
+      console.error("[INFO] ✅ Smart router preference handler initialized");
+    }
+
     console.error("[INFO] ✅ Smart router initialized");
 
     // Print service status summary
@@ -387,6 +500,100 @@ function initializeSqliteSchema(): void {
       value TEXT,
       updated_at INTEGER
     );
+  `);
+}
+
+/**
+ * Initialize SQLite schema for semantic memory (HippoRAG knowledge graph)
+ */
+function initializeSemanticMemorySchema(): void {
+  if (!connections.sqlite) {
+    throw new Error("SQLite not initialized");
+  }
+
+  connections.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS entities (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      description TEXT,
+      confidence REAL DEFAULT 1.0,
+      created_at TEXT NOT NULL,
+      last_accessed TEXT NOT NULL,
+      access_count INTEGER DEFAULT 1
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(type);
+    CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name);
+
+    CREATE TABLE IF NOT EXISTS relationships (
+      id TEXT PRIMARY KEY,
+      source_id TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      relation_type TEXT NOT NULL,
+      strength REAL DEFAULT 0.8,
+      evidence TEXT,
+      created_at TEXT NOT NULL,
+      last_reinforced TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_relationships_source ON relationships(source_id);
+    CREATE INDEX IF NOT EXISTS idx_relationships_target ON relationships(target_id);
+
+    CREATE TABLE IF NOT EXISTS facts (
+      id TEXT PRIMARY KEY,
+      entity_id TEXT NOT NULL,
+      property TEXT NOT NULL,
+      value TEXT NOT NULL,
+      confidence REAL DEFAULT 1.0,
+      valid_from TEXT,
+      valid_until TEXT,
+      source_conversation TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_facts_entity ON facts(entity_id);
+
+    CREATE TABLE IF NOT EXISTS conflicts (
+      id TEXT PRIMARY KEY,
+      fact_id_1 TEXT,
+      fact_id_2 TEXT,
+      conflict_type TEXT,
+      description TEXT,
+      severity TEXT,
+      resolution_status TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS backup_metadata (
+      id TEXT PRIMARY KEY,
+      backup_type TEXT NOT NULL,
+      backup_path TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL
+    );
+  `);
+}
+
+/**
+ * Initialize SQLite schema for skill library (procedural memory)
+ */
+function initializeSkillLibrarySchema(): void {
+  if (!connections.sqlite) {
+    throw new Error("SQLite not initialized");
+  }
+
+  connections.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS skills (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      category TEXT NOT NULL,
+      triggers TEXT NOT NULL,
+      success_count INTEGER DEFAULT 0,
+      failure_count INTEGER DEFAULT 0,
+      avg_user_satisfaction REAL DEFAULT 0.5
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_skills_category ON skills(category);
   `);
 }
 
@@ -744,6 +951,58 @@ async function handleVesperStatus(): Promise<Record<string, unknown>> {
 }
 
 /**
+ * Handle record_skill_outcome tool call
+ *
+ * Records success or failure feedback for a skill execution.
+ * Used to improve skill ranking over time.
+ */
+async function handleRecordSkillOutcome(input: unknown): Promise<Record<string, unknown>> {
+  if (!connections.skillLibrary) {
+    throw new McpError(
+      ErrorCode.InternalError,
+      "Skill library not available"
+    );
+  }
+
+  try {
+    // Validate input
+    const validatedInput = validateInput(RecordSkillOutcomeInputSchema, input);
+
+    if (validatedInput.outcome === "success") {
+      if (validatedInput.satisfaction === undefined) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          "satisfaction is required for success outcome"
+        );
+      }
+      connections.skillLibrary.recordSuccess(
+        validatedInput.skill_id,
+        validatedInput.satisfaction
+      );
+      console.error(
+        `[INFO] Recorded skill success: ${validatedInput.skill_id} (satisfaction: ${validatedInput.satisfaction})`
+      );
+    } else {
+      connections.skillLibrary.recordFailure(validatedInput.skill_id);
+      console.error(`[INFO] Recorded skill failure: ${validatedInput.skill_id}`);
+    }
+
+    return {
+      success: true,
+      skill_id: validatedInput.skill_id,
+      outcome: validatedInput.outcome,
+      satisfaction: validatedInput.satisfaction,
+      message: `Skill ${validatedInput.outcome} recorded for ${validatedInput.skill_id}`,
+    };
+  } catch (err) {
+    throw new McpError(
+      ErrorCode.InternalError,
+      `Failed to record skill outcome: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
+
+/**
  * Process tool calls
  */
 async function processTool(
@@ -782,6 +1041,8 @@ async function processTool(
       return await handleListRecent(input);
     case "get_stats":
       return await handleGetStats(input);
+    case "record_skill_outcome":
+      return await handleRecordSkillOutcome(input);
     default:
       throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
   }
@@ -871,8 +1132,31 @@ async function main(): Promise<void> {
 
   await server.connect(transport);
   console.error("[INFO] Vesper running on stdio transport");
-  console.error("[INFO] Available tools: store_memory, retrieve_memory, list_recent, get_stats, vesper_enable, vesper_disable, vesper_status");
+  console.error("[INFO] Available tools: store_memory, retrieve_memory, list_recent, get_stats, record_skill_outcome, vesper_enable, vesper_disable, vesper_status");
 }
+
+// Cleanup handler for graceful shutdown
+function cleanup(): void {
+  console.error('[INFO] Shutting down Vesper...');
+
+  if (connections.consolidationScheduler) {
+    connections.consolidationScheduler.stop();
+  }
+
+  if (connections.redis) {
+    connections.redis.disconnect();
+  }
+
+  if (connections.sqlite) {
+    connections.sqlite.close();
+  }
+
+  console.error('[INFO] Vesper shutdown complete');
+  process.exit(0);
+}
+
+process.on('SIGINT', cleanup);
+process.on('SIGTERM', cleanup);
 
 // Run the server
 main().catch((err) => {

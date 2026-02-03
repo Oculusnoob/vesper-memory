@@ -102,6 +102,45 @@ export const GetStatsInputSchema = z.object({
 
 export type GetStatsInput = z.infer<typeof GetStatsInputSchema>;
 
+/**
+ * Schema for record_skill_outcome tool input
+ *
+ * Records success or failure feedback for a skill execution.
+ * Used to improve skill ranking over time.
+ *
+ * Enforces:
+ * - skill_id is required
+ * - outcome must be 'success' or 'failure'
+ * - satisfaction is required for success (0-1 range)
+ */
+export const RecordSkillOutcomeInputSchema = z.object({
+  skill_id: z.string()
+    .min(1, "skill_id cannot be empty"),
+
+  outcome: z.enum(["success", "failure"], {
+    message: "outcome must be 'success' or 'failure'"
+  }),
+
+  satisfaction: z.number()
+    .min(0, "satisfaction must be at least 0")
+    .max(1, "satisfaction cannot exceed 1")
+    .optional(),
+}).refine(
+  (data) => {
+    // satisfaction is required for success outcome
+    if (data.outcome === 'success' && data.satisfaction === undefined) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "satisfaction is required when outcome is 'success'",
+    path: ["satisfaction"]
+  }
+);
+
+export type RecordSkillOutcomeInput = z.infer<typeof RecordSkillOutcomeInputSchema>;
+
 // ============================================================================
 // Internal Data Type Schemas
 // ============================================================================
