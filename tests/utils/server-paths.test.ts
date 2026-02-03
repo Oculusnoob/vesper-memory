@@ -98,10 +98,10 @@ describe("Server Path Integration", () => {
       // Call ensureDirectories (this is what server.ts should call)
       ensureDirectories();
 
-      // Verify data directory was created
+      // Verify data directory was created (with restrictive permissions)
       expect(fs.mkdirSync).toHaveBeenCalledWith(
         path.join(mockHomedir, ".vesper", "data"),
-        { recursive: true }
+        { recursive: true, mode: 0o700 }
       );
     });
 

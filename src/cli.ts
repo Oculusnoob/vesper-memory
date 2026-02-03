@@ -7,11 +7,13 @@
  */
 
 import { execSync } from 'child_process';
-import { existsSync, mkdirSync, writeFileSync, readFileSync, cpSync, rmSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, cpSync, rmSync, copyFileSync, statSync } from 'fs';
 import { homedir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { randomBytes } from 'crypto';
+import { createInterface } from 'readline';
+import { getSqlitePath, getVesperHome, ensureDirectories } from './utils/paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -90,7 +92,7 @@ async function install() {
   }
   success('Docker found');
 
-  // Create installation directory
+  // Create installation directory and user-level data directories
   info(`Installing to ${INSTALL_DIR}...`);
 
   if (existsSync(INSTALL_DIR)) {
@@ -98,6 +100,16 @@ async function install() {
     info('Updating existing installation...');
   } else {
     mkdirSync(INSTALL_DIR, { recursive: true });
+  }
+
+  // Create user-level data directories (~/.vesper/data, ~/.vesper/docker-data, etc.)
+  info('Creating user-level data directories...');
+  try {
+    ensureDirectories();
+    success(`Data directories created at ${getVesperHome()}`);
+  } catch (err) {
+    error(`Failed to create data directories: ${err instanceof Error ? err.message : String(err)}`);
+    throw err;
   }
 
   // Copy files from npm package to install directory
@@ -406,11 +418,27 @@ async function configure() {
   info('Loading environment configuration...');
   const envVars = loadEnvFile(packageRoot);
 
-  // Resolve SQLite DB path relative to package root
-  const sqliteDb = envVars.SQLITE_DB || './data/memory.db';
-  const absoluteSqliteDb = sqliteDb.startsWith('/')
-    ? sqliteDb
-    : join(packageRoot, sqliteDb);
+  // Ensure user-level data directories exist
+  try {
+    ensureDirectories();
+  } catch (err) {
+    warning(`Could not create data directories: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  // Resolve SQLite DB path: use env var if set, otherwise user-level path
+  // New default: ~/.vesper/data/memory.db (not ./data/memory.db)
+  let absoluteSqliteDb: string;
+  if (envVars.SQLITE_DB) {
+    // Explicit env var - resolve relative to package root if needed
+    absoluteSqliteDb = envVars.SQLITE_DB.startsWith('/')
+      ? envVars.SQLITE_DB
+      : envVars.SQLITE_DB === ':memory:'
+        ? ':memory:'
+        : join(packageRoot, envVars.SQLITE_DB);
+  } else {
+    // Default to user-level storage
+    absoluteSqliteDb = getSqlitePath();
+  }
 
   info('Configuring Claude Code MCP integration...');
 
@@ -551,12 +579,43 @@ function status() {
     return;
   }
 
+  // Check user-level data directory
+  const vesperHome = getVesperHome();
+  log(`\n📂 Data Directory: ${vesperHome}`);
+  if (existsSync(vesperHome)) {
+    success('Data directory exists');
+
+    // Check for SQLite database
+    const sqlitePath = getSqlitePath();
+    if (existsSync(sqlitePath)) {
+      try {
+        const stats = statSync(sqlitePath);
+        const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
+        success(`SQLite database: ${sizeMB} MB`);
+      } catch {
+        success('SQLite database exists');
+      }
+    } else {
+      info('SQLite database: not yet created (will be created on first use)');
+    }
+
+    // Check for old data that could be migrated
+    const oldDataPath = join(INSTALL_DIR, 'data', 'memory.db');
+    if (existsSync(oldDataPath) && oldDataPath !== sqlitePath) {
+      warning('Old data found at installation directory');
+      info('Run "vesper migrate" to move data to user-level storage');
+    }
+  } else {
+    warning('Data directory not created yet');
+    info('Run "vesper configure" or "vesper install" to create');
+  }
+
   // Check MCP config using claude CLI
   log('\n🤖 MCP Configuration:');
   try {
     const output = execSync('claude mcp get vesper', { encoding: 'utf-8', stdio: 'pipe' });
     if (output.includes('"vesper"') || output.toLowerCase().includes('vesper')) {
-      success('Configured in Claude Code ✅');
+      success('Configured in Claude Code');
       success('Memory system: ENABLED');
     } else {
       warning('Not configured in Claude Code');
@@ -593,6 +652,142 @@ function status() {
   }
 
   log('');
+}
+
+// Helper function to prompt for user confirmation
+function promptConfirm(question: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const rl = createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    rl.question(`${question} (y/N): `, (answer) => {
+      rl.close();
+      resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
+    });
+  });
+}
+
+// Migrate data from old locations to user-level storage
+async function migrate() {
+  header('🚚 Migrating Vesper Data to User-Level Storage');
+
+  const vesperHome = getVesperHome();
+  const newDbPath = getSqlitePath();
+
+  // Potential old data locations
+  const oldLocations = [
+    join(INSTALL_DIR, 'data', 'memory.db'),  // Old installation directory
+    './data/memory.db',                        // Current working directory
+  ];
+
+  info(`Target location: ${newDbPath}`);
+
+  // Ensure target directories exist
+  try {
+    ensureDirectories();
+    success(`Data directories created at ${vesperHome}`);
+  } catch (err) {
+    error(`Failed to create data directories: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
+
+  // Find old data
+  let foundOldData = false;
+  let oldDataPath = '';
+  let oldDataSize = 0;
+
+  for (const oldPath of oldLocations) {
+    if (existsSync(oldPath)) {
+      try {
+        const stats = statSync(oldPath);
+        if (stats.isFile() && stats.size > 0) {
+          foundOldData = true;
+          oldDataPath = oldPath;
+          oldDataSize = stats.size;
+          break;
+        }
+      } catch {
+        // Ignore stat errors
+      }
+    }
+  }
+
+  if (!foundOldData) {
+    info('No old data found to migrate.');
+    info('Checked locations:');
+    for (const loc of oldLocations) {
+      log(`   - ${loc}`);
+    }
+    log('\n');
+    success('Nothing to migrate. You are ready to use Vesper!');
+    return;
+  }
+
+  const sizeMB = (oldDataSize / 1024 / 1024).toFixed(2);
+  info(`Found old database: ${oldDataPath} (${sizeMB} MB)`);
+
+  // Check if target already exists
+  if (existsSync(newDbPath)) {
+    try {
+      const newStats = statSync(newDbPath);
+      const newSizeMB = (newStats.size / 1024 / 1024).toFixed(2);
+      warning(`Target already exists: ${newDbPath} (${newSizeMB} MB)`);
+
+      const shouldOverwrite = await promptConfirm('Overwrite existing data?');
+      if (!shouldOverwrite) {
+        info('Migration cancelled. Existing data preserved.');
+        return;
+      }
+    } catch {
+      // Target exists but couldn't stat - proceed with caution
+    }
+  }
+
+  // Confirm migration
+  log('\n📋 Migration Plan:');
+  log(`   From: ${oldDataPath}`);
+  log(`   To:   ${newDbPath}`);
+  log(`   Size: ${sizeMB} MB\n`);
+
+  const shouldProceed = await promptConfirm('Proceed with migration?');
+  if (!shouldProceed) {
+    info('Migration cancelled.');
+    return;
+  }
+
+  // Perform migration
+  info('Copying database...');
+  try {
+    copyFileSync(oldDataPath, newDbPath);
+    success('Database copied successfully');
+
+    // Verify the copy
+    if (existsSync(newDbPath)) {
+      const copiedStats = statSync(newDbPath);
+      if (copiedStats.size === oldDataSize) {
+        success('Verification passed: file sizes match');
+      } else {
+        warning('File sizes differ - please verify data integrity');
+      }
+    }
+
+    log('\n');
+    success('Migration complete!');
+    info(`Your data is now at: ${newDbPath}`);
+    info(`Old data preserved at: ${oldDataPath}`);
+    log('\n💡 You can safely remove the old data after verifying everything works:\n');
+    log(`   rm "${oldDataPath}"\n`);
+
+    // Remind to reconfigure
+    info('Run "vesper configure" to update MCP settings to use the new location.');
+
+  } catch (err) {
+    error(`Migration failed: ${err instanceof Error ? err.message : String(err)}`);
+    error('Your original data is still intact at the old location.');
+    process.exit(1);
+  }
 }
 
 // Main CLI
@@ -638,6 +833,13 @@ switch (command) {
     });
     break;
 
+  case 'migrate':
+    migrate().catch((err) => {
+      error(`Migration failed: ${err.message}`);
+      process.exit(1);
+    });
+    break;
+
   case 'help':
   case '--help':
   case '-h':
@@ -651,6 +853,7 @@ ${colors.bright}USAGE:${colors.reset}
 ${colors.bright}COMMANDS:${colors.reset}
   install      Install Vesper and configure Claude Code (full setup)
   configure    Configure MCP server only (no Docker setup)
+  migrate      Migrate data from old location to user-level storage
   uninstall    Remove Vesper completely
   status       Show installation and service status
   enable       Enable Vesper memory system
@@ -660,6 +863,7 @@ ${colors.bright}COMMANDS:${colors.reset}
 ${colors.bright}EXAMPLES:${colors.reset}
   vesper install       # Full installation with Docker setup
   vesper configure     # Configure MCP only (lightweight)
+  vesper migrate       # Move data to ~/.vesper/data/
   vesper status        # Check if running
   vesper enable        # Enable memory system
   vesper disable       # Disable for benchmarking

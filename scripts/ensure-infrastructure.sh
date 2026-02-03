@@ -6,6 +6,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR" || exit 1
 
+# Set VESPER_HOME for user-level storage (default: ~/.vesper)
+# This is exported so docker-compose can use it for volume mounts
+export VESPER_HOME="${VESPER_HOME:-$HOME/.vesper}"
+
+# Create required directories before Docker starts
+# Docker will fail to mount volumes if these directories don't exist
+mkdir -p "$VESPER_HOME/data"
+mkdir -p "$VESPER_HOME/docker-data/qdrant"
+mkdir -p "$VESPER_HOME/docker-data/redis"
+mkdir -p "$VESPER_HOME/logs"
+
 # Check if Docker is running
 if ! docker info >/dev/null 2>&1; then
     echo "⚠️  Docker is not running. Please start Docker Desktop."

@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Performance**: <200ms P95 latency, 95%+ retrieval accuracy
 
-**Test Coverage**: 151/151 tests passing (100%)
+**Test Coverage**: 632/632 tests passing (100%)
 
 ---
 
@@ -29,10 +29,27 @@ npm run build
 docker-compose up -d
 
 # Run tests
-npm test                    # 151 tests should pass
+npm test                    # 632 tests should pass
 
 # Run MCP server (development mode)
 npm run dev
+```
+
+### User-Level Storage
+
+All data is stored at `~/.vesper/` (user-level) instead of project directories:
+- **SQLite database**: `~/.vesper/data/memory.db`
+- **Docker volumes**: `~/.vesper/docker-data/`
+- **Logs**: `~/.vesper/logs/`
+
+**Benefits**:
+- Memories persist across all projects
+- No data in git repositories
+- Simple backup: just copy `~/.vesper/`
+
+**Migrating from v0.3.x**:
+```bash
+vesper migrate  # Automatic migration from old locations
 ```
 
 ---
@@ -182,7 +199,8 @@ REDIS_PORT=6379
 QDRANT_URL=http://localhost:6333
 
 # SQLite (Knowledge Graph)
-SQLITE_DB=./data/memory.db
+# Default: ~/.vesper/data/memory.db (user-level storage)
+# SQLITE_DB=~/.vesper/data/memory.db
 
 # Embedding Service (BGE-large)
 EMBEDDING_SERVICE_URL=http://localhost:8000
@@ -198,7 +216,7 @@ LOG_LEVEL=info
 
 ## Test Architecture
 
-**Overall**: 151/151 tests passing (100%)
+**Overall**: 632/632 tests passing (100%)
 
 ### Test Coverage
 

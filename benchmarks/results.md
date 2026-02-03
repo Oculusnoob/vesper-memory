@@ -1,6 +1,6 @@
 # Vesper Memory System - Benchmark Results
 
-Generated: 2026-02-03T01:56:02.136Z
+Generated: 2026-02-03T02:21:57.972Z
 
 ## Summary
 
@@ -11,8 +11,8 @@ Scientific testing demonstrates concrete performance improvements when using Ves
 | Metric | Without Memory | With Vesper | Improvement | Unit |
 |--------|---------------|-------------|-------------|------|
 | Query Latency (P50) | 4.6 | 0.9 | **+79.6%** | ms |
-| Query Latency (P95) | 6.9 | 3.3 | **+51.7%** | ms |
-| Query Latency (P99) | 7.0 | 5.8 | **+17.9%** | ms |
+| Query Latency (P95) | 6.9 | 3.0 | **+56.4%** | ms |
+| Query Latency (P99) | 7.0 | 5.5 | **+22.6%** | ms |
 | Retrieval Accuracy | 0.0 | 100.0 | **+100.0%** | % |
 | Context Retention | 2.0 | 100.0 | **+4900.0%** | % |
 | Token Efficiency | 500000.0 | 50000.0 | **+90.0%** | tokens |
@@ -31,18 +31,18 @@ Queries are 80% faster with memory, reducing wait time and improving responsiven
 ### 🚀 Query Latency (P95)
 
 - **Without Memory**: 6.9 ms
-- **With Vesper**: 3.3 ms
-- **Improvement**: +51.7%
+- **With Vesper**: 3.0 ms
+- **Improvement**: +56.4%
 
-Queries are 52% faster with memory, reducing wait time and improving responsiveness. This compounds across sessions for significant UX gains.
+Queries are 56% faster with memory, reducing wait time and improving responsiveness. This compounds across sessions for significant UX gains.
 
-### 📊 Query Latency (P99)
+### ✅ Query Latency (P99)
 
 - **Without Memory**: 7.0 ms
-- **With Vesper**: 5.8 ms
-- **Improvement**: +17.9%
+- **With Vesper**: 5.5 ms
+- **Improvement**: +22.6%
 
-Queries are 18% faster with memory, reducing wait time and improving responsiveness. This compounds across sessions for significant UX gains.
+Queries are 23% faster with memory, reducing wait time and improving responsiveness. This compounds across sessions for significant UX gains.
 
 ### 🚀 Retrieval Accuracy
 
@@ -90,7 +90,7 @@ All tests run on production-equivalent infrastructure (Redis, SQLite, semantic s
 ## Conclusion
 
 Vesper provides measurable, scientifically validated improvements across all key metrics:
-- **Faster**: 52% latency reduction
+- **Faster**: 56% latency reduction
 - **Smarter**: 100% retrieval accuracy
 - **Persistent**: 100% context retention
 - **Efficient**: 90% token savings

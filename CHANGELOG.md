@@ -5,6 +5,78 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-02-03
+
+### BREAKING CHANGES
+
+**User-Level Storage Migration**
+- All data now stored at `~/.vesper/` (user-level) instead of project directories
+- SQLite database: `~/.vesper/data/memory.db` (was `./data/memory.db`)
+- Docker volumes: `~/.vesper/docker-data/` (were named volumes `qdrant_storage`, `redis_storage`)
+- Memories now persist across all projects
+
+**Migration Required:**
+```bash
+# Automatic migration from v0.3.x
+vesper migrate
+
+# Or manually:
+mkdir -p ~/.vesper/data
+cp ./data/memory.db ~/.vesper/data/memory.db
+docker-compose down
+docker-compose up -d
+```
+
+### Added
+
+**CLI Enhancements**
+- `vesper migrate` command for automatic data migration from v0.3.x
+- User-level directory structure creation with secure permissions (0o700)
+- `VESPER_HOME` environment variable for custom storage location
+- Improved `vesper status` showing data directory and database size
+- Detection of old data needing migration
+
+**Path Utilities**
+- Cross-platform path resolution module (`src/utils/paths.ts`)
+- `getVesperHome()` - Resolves `~/.vesper` with platform-specific home directory
+- `getSqlitePath()` - Returns user-level SQLite database path
+- `ensureDirectories()` - Creates all required directories with proper permissions
+- Tilde expansion support in environment variables
+
+**Security Improvements**
+- Path traversal warnings for system directories
+- Restrictive directory permissions (owner-only: 0o700)
+- Fixed command injection vulnerability in CLI uninstall
+- Secrets excluded from version control (.claude/settings.local.json)
+
+**Testing**
+- 62 new tests for path utilities, CLI migration, and Docker config
+- Total: 632 tests passing (up from 570)
+- 100% test coverage for migration logic
+
+### Changed
+
+- Docker volumes changed from named volumes to host bind mounts
+- Default SQLITE_DB path from `./data/memory.db` to `~/.vesper/data/memory.db`
+- CLI install creates `~/.vesper/` structure instead of local `data/` directory
+- Server logs now indicate whether using user-level storage or override
+- Environment variable handling improved with `VESPER_HOME` support
+
+### Fixed
+
+- Command injection vulnerability in `vesper uninstall` (replaced shell `rm -rf` with `fs.rmSync`)
+- Race condition in directory creation (removed redundant `existsSync` checks)
+- Missing error handling for directory creation failures
+- Secrets exposure risk (added .claude/settings.local.json to .gitignore)
+
+### Security
+
+- **CRITICAL**: Prevented hardcoded secrets in version control
+- **HIGH**: Fixed command injection in CLI uninstall
+- **HIGH**: Added path traversal warnings for dangerous paths
+- **MEDIUM**: Set restrictive permissions on data directories
+- Security review conducted by automated security-reviewer agent
+
 ## [0.3.0] - 2026-02-02
 
 ### Added
