@@ -1,8 +1,8 @@
 # Vesper Benchmark Report
 
-**Generated:** 2026-02-02T23:55:16.362Z
+**Generated:** 2026-02-03T01:55:57.564Z
 
-**Benchmark ID:** bench-d3f90a27
+**Benchmark ID:** bench-41446e31
 
 **Duration:** 1.2s
 
@@ -15,7 +15,7 @@
 | Vesper Wins | 0 |
 | Disabled Wins | 3 |
 | Ties | 2 |
-| Overall Improvement | -933.4% |
+| Overall Improvement | -935.7% |
 | Statistically Significant | Yes |
 
 ### Conclusion
@@ -35,19 +35,19 @@ Vesper shows **limited improvement** in current configuration. Review implementa
 
 | Metric | Vesper Enabled | Vesper Disabled | Improvement |
 | --- | --- | --- | --- |
-| P50 | 9.5 | 1.2 | -672.6% |
-| P95 | 19.8 | 1.4 | -1291.8% |
-| P99 | 20.3 | 1.5 | -1259.6% |
+| P50 | 11.2 | 1.3 | -752.5% |
+| P95 | 17.6 | 1.7 | -937.0% |
+| P99 | 19.4 | 2.0 | -870.8% |
 
 **Memory Hit Rate:** Enabled: +62.5%, Disabled: 0.0%
 
 #### Statistical Analysis
 
-- **Latency Improvement:** -775.3%
-- **t-test statistic:** 4.876
-- **p-value:** 0.0018
+- **Latency Improvement:** -988.9%
+- **t-test statistic:** 8.473
+- **p-value:** 0.0001
 - **Significant (p < 0.05):** Yes
-- **Cohen's d:** 2.438 (large)
+- **Cohen's d:** 4.237 (large)
 
 
 ### Skill Retrieval
@@ -60,19 +60,19 @@ Vesper shows **limited improvement** in current configuration. Review implementa
 
 | Metric | Vesper Enabled | Vesper Disabled | Improvement |
 | --- | --- | --- | --- |
-| P50 | 10.1 | 1.3 | -680.7% |
-| P95 | 18.2 | 1.9 | -858.5% |
-| P99 | 18.2 | 1.9 | -858.5% |
+| P50 | 9.4 | 1.3 | -597.1% |
+| P95 | 15.8 | 2.4 | -546.9% |
+| P99 | 15.8 | 2.4 | -546.9% |
 
 **Memory Hit Rate:** Enabled: +100.0%, Disabled: 0.0%
 
 #### Statistical Analysis
 
-- **Latency Improvement:** -806.3%
-- **t-test statistic:** 11.975
-- **p-value:** 0.0004
+- **Latency Improvement:** -437.3%
+- **t-test statistic:** 9.379
+- **p-value:** 0.0012
 - **Significant (p < 0.05):** Yes
-- **Cohen's d:** 9.778 (large)
+- **Cohen's d:** 7.658 (large)
 
 
 ### Semantic Accuracy
@@ -85,19 +85,19 @@ Vesper shows **limited improvement** in current configuration. Review implementa
 
 | Metric | Vesper Enabled | Vesper Disabled | Improvement |
 | --- | --- | --- | --- |
-| P50 | 13.2 | 1.2 | -983.1% |
-| P95 | 20.2 | 1.4 | -1316.6% |
-| P99 | 20.2 | 1.4 | -1316.6% |
+| P50 | 12.7 | 1.4 | -840.1% |
+| P95 | 19.7 | 1.6 | -1117.0% |
+| P99 | 19.7 | 1.6 | -1117.0% |
 
 **Memory Hit Rate:** Enabled: +100.0%, Disabled: 0.0%
 
 #### Statistical Analysis
 
-- **Latency Improvement:** -916.0%
-- **t-test statistic:** 3.348
-- **p-value:** 0.0787
+- **Latency Improvement:** -781.6%
+- **t-test statistic:** 3.287
+- **p-value:** 0.0813
 - **Significant (p < 0.05):** No
-- **Cohen's d:** 2.734 (large)
+- **Cohen's d:** 2.684 (large)
 
 
 ### Token Efficiency
@@ -110,19 +110,19 @@ Vesper shows **limited improvement** in current configuration. Review implementa
 
 | Metric | Vesper Enabled | Vesper Disabled | Improvement |
 | --- | --- | --- | --- |
-| P50 | 17.8 | 1.2 | -1387.1% |
-| P95 | 19.1 | 1.2 | -1430.0% |
-| P99 | 19.1 | 1.2 | -1430.0% |
+| P50 | 15.1 | 1.2 | -1169.3% |
+| P95 | 19.2 | 1.3 | -1393.7% |
+| P99 | 19.2 | 1.3 | -1393.7% |
 
 **Memory Hit Rate:** Enabled: +100.0%, Disabled: 0.0%
 
 #### Statistical Analysis
 
-- **Latency Improvement:** -1033.1%
-- **t-test statistic:** 2.807
-- **p-value:** 0.2179
+- **Latency Improvement:** -1374.9%
+- **t-test statistic:** 7.871
+- **p-value:** 0.0804
 - **Significant (p < 0.05):** No
-- **Cohen's d:** 2.807 (large)
+- **Cohen's d:** 7.871 (large)
 
 
 ### Cross Session
@@ -135,19 +135,19 @@ Vesper shows **limited improvement** in current configuration. Review implementa
 
 | Metric | Vesper Enabled | Vesper Disabled | Improvement |
 | --- | --- | --- | --- |
-| P50 | 13.1 | 1.2 | -977.4% |
-| P95 | 19.0 | 1.3 | -1361.3% |
-| P99 | 19.0 | 1.3 | -1361.3% |
+| P50 | 13.3 | 1.2 | -1001.9% |
+| P95 | 19.1 | 1.3 | -1337.2% |
+| P99 | 19.1 | 1.3 | -1337.2% |
 
 **Memory Hit Rate:** Enabled: +66.7%, Disabled: 0.0%
 
 #### Statistical Analysis
 
-- **Latency Improvement:** -1136.4%
-- **t-test statistic:** 4.611
-- **p-value:** 0.0440
+- **Latency Improvement:** -1095.8%
+- **t-test statistic:** 12.178
+- **p-value:** 0.0066
 - **Significant (p < 0.05):** Yes
-- **Cohen's d:** 3.765 (large)
+- **Cohen's d:** 9.943 (large)
 
 
 ## Configuration

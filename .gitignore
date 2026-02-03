@@ -100,3 +100,8 @@ config/grafana/provisioning/datasources/*.yaml
 test-results/
 playwright-report/
 *.spec.ts.snap
+
+# Other
+vesper-article.md
+.claude/settings.local.json
+.claude/*.local.json

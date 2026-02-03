@@ -65,6 +65,35 @@ export function getVesperHome(): string {
     if (expanded.length > 1 && expanded.endsWith(path.sep)) {
       expanded = expanded.slice(0, -1);
     }
+
+    // SECURITY: Warn if path is a system directory
+    const systemPaths = [
+      "/etc",
+      "/var",
+      "/usr",
+      "/bin",
+      "/sbin",
+      "/System",
+      "/Library",
+      "C:\\Windows",
+      "C:\\Program Files",
+    ];
+    const isSystemPath = systemPaths.some(
+      (sys) => expanded === sys || expanded.startsWith(sys + path.sep)
+    );
+
+    if (isSystemPath) {
+      console.error(`[WARN] VESPER_HOME points to system directory: ${expanded}`);
+      console.error("[WARN] This may cause permission issues or system instability");
+    }
+
+    // SECURITY: Warn if path is user's home directory root
+    const home = os.homedir();
+    if (expanded === home) {
+      console.error(`[WARN] VESPER_HOME is set to home directory root: ${expanded}`);
+      console.error("[WARN] Consider using ~/.vesper or a subdirectory");
+    }
+
     return expanded;
   }
 
@@ -130,13 +159,14 @@ export function ensureDirectories(): string {
   const vesperHome = getVesperHome();
 
   try {
-    // Create home directory (mkdirSync with recursive: true is idempotent)
-    fs.mkdirSync(vesperHome, { recursive: true });
+    // Create home directory with restrictive permissions (owner read/write/execute only)
+    // This protects sensitive data on shared systems
+    fs.mkdirSync(vesperHome, { recursive: true, mode: 0o700 });
 
-    // Create all subdirectories
+    // Create all subdirectories with same restrictive permissions
     for (const subdir of VESPER_SUBDIRS) {
       const fullPath = path.join(vesperHome, subdir);
-      fs.mkdirSync(fullPath, { recursive: true });
+      fs.mkdirSync(fullPath, { recursive: true, mode: 0o700 });
     }
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);

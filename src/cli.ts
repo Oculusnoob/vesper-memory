@@ -7,7 +7,7 @@
  */
 
 import { execSync } from 'child_process';
-import { existsSync, mkdirSync, writeFileSync, readFileSync, cpSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, cpSync, rmSync } from 'fs';
 import { homedir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -307,8 +307,12 @@ async function uninstall() {
 
   // Remove installation directory
   info('Removing files...');
-  execSync(`rm -rf "${INSTALL_DIR}"`, { stdio: 'inherit' });
-  success('Files removed');
+  try {
+    rmSync(INSTALL_DIR, { recursive: true, force: true });
+    success('Files removed');
+  } catch (err) {
+    error(`Failed to remove ${INSTALL_DIR}: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   log('\n✅ Vesper uninstalled successfully\n');
   info('Restart Claude Code to complete removal');
