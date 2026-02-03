@@ -4,6 +4,13 @@ set -e
 echo "🧪 Testing Vesper Package Locally"
 echo ""
 
+# Backup MCP config before testing
+echo "💾 Backing up MCP config..."
+if [ -f ~/.claude.json ]; then
+  cp ~/.claude.json ~/.claude.json.test-backup
+  echo "   ✅ Backed up ~/.claude.json"
+fi
+
 # Clean build
 echo "1️⃣ Building..."
 npm run build
@@ -45,9 +52,9 @@ fi
 
 # Check MCP config
 echo "7️⃣ Checking MCP config..."
-if grep -q "vesper" ~/.claude/mcp_config.json; then
+if grep -q "vesper" ~/.claude.json; then
   echo "   ✅ MCP config updated"
-  cat ~/.claude/mcp_config.json | jq '.mcpServers.vesper'
+  cat ~/.claude.json | jq '.mcpServers.vesper'
 else
   echo "   ❌ MCP config not updated!"
   exit 1
@@ -78,4 +85,14 @@ echo "   vesper uninstall"
 echo "   npm uninstall -g vesper"
 echo "   rm vesper-0.1.0.tgz"
 echo "   rm -rf $VESPER_INSTALL_DIR"
+echo ""
+
+# Restore MCP config
+echo "🔄 Restoring MCP config..."
+if [ -f ~/.claude.json.test-backup ]; then
+  mv ~/.claude.json.test-backup ~/.claude.json
+  echo "   ✅ Restored ~/.claude.json"
+else
+  echo "   ⚠️  No backup found to restore"
+fi
 echo ""
