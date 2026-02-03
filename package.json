@@ -49,7 +49,7 @@
   "bugs": {
     "url": "https://github.com/fitz2882/vesper/issues"
   },
-  "homepage": "https://github.com/fitz2882/vesper#readme",
+  "homepage": "https://github.com/fitz2882/vesper-memory#readme",
   "license": "MIT",
   "scripts": {
     "postinstall": "node scripts/postinstall.js",
