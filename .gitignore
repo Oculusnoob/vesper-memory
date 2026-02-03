@@ -105,3 +105,7 @@ playwright-report/
 vesper-article.md
 .claude/settings.local.json
 .claude/*.local.json
+
+# Auto-generated benchmark results
+benchmarks/results.md
+benchmarks/scientific-results.md
