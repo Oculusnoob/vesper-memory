@@ -29,6 +29,7 @@ import {
   ListRecentInputSchema,
   GetStatsInputSchema,
 } from "./utils/validation.js";
+import { getSqlitePath, ensureDirectories } from "./utils/paths.js";
 import { createEmbeddingClient, EmbeddingClient } from "./embeddings/client.js";
 import { HybridSearchEngine } from "./retrieval/hybrid-search.js";
 import { WorkingMemoryLayer } from "./memory-layers/working-memory.js";
@@ -230,13 +231,24 @@ async function initializeConnections(): Promise<void> {
 
     // Initialize SQLite (metadata store)
     try {
-      const dbPath = process.env.SQLITE_DB || ":memory:";
+      // Ensure ~/.vesper directories exist (for user-level storage)
+      ensureDirectories();
+
+      // Use SQLITE_DB env if set, otherwise use user-level path (~/.vesper/data/memory.db)
+      const isUserLevel = !process.env.SQLITE_DB;
+      const dbPath = process.env.SQLITE_DB || getSqlitePath();
       connections.sqlite = new DatabaseConstructor(dbPath);
       connections.sqlite.pragma("journal_mode = WAL");
 
       // Initialize schema
       initializeSqliteSchema();
-      console.error("[INFO] SQLite database initialized at", dbPath);
+
+      // Clear logging about storage location
+      if (isUserLevel) {
+        console.error(`[INFO] SQLite database initialized at ${dbPath} (user-level storage)`);
+      } else {
+        console.error(`[INFO] SQLite database initialized at ${dbPath} (SQLITE_DB override)`);
+      }
     } catch (err) {
       console.error(
         "[WARN] SQLite initialization failed:",
