@@ -94,8 +94,9 @@ export class HybridSearchEngine {
     this.collectionName = sanitizeCollectionName(collectionName);
     this.vectorSize = vectorSize;
 
-    const clientConfig: { url: string; apiKey?: string } = {
+    const clientConfig: { url: string; apiKey?: string; checkCompatibility?: boolean } = {
       url: qdrantUrl,
+      checkCompatibility: false, // Allow client 1.16.2 with server 1.7.4
     };
 
     // Add API key if provided

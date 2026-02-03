@@ -59,6 +59,7 @@ describe("Qdrant API Key Authentication", () => {
     const client = new QdrantClient({
       url: QDRANT_URL,
       apiKey: QDRANT_API_KEY,
+      checkCompatibility: false,
     });
     expect(client).toBeDefined();
   });
@@ -67,6 +68,7 @@ describe("Qdrant API Key Authentication", () => {
     const client = new QdrantClient({
       url: QDRANT_URL,
       apiKey: QDRANT_API_KEY,
+      checkCompatibility: false,
     });
 
     // getCollections should succeed with valid API key
@@ -99,6 +101,7 @@ describe("Qdrant Collection Management", () => {
     client = new QdrantClient({
       url: QDRANT_URL,
       apiKey: QDRANT_API_KEY,
+      checkCompatibility: false,
     });
   });
 
@@ -177,6 +180,7 @@ describe("Qdrant Vector Operations", () => {
     client = new QdrantClient({
       url: QDRANT_URL,
       apiKey: QDRANT_API_KEY,
+      checkCompatibility: false,
     });
 
     // Create test collection
@@ -358,6 +362,7 @@ describe("HybridSearchEngine with API Key", () => {
     const client = new QdrantClient({
       url: QDRANT_URL,
       apiKey: QDRANT_API_KEY,
+      checkCompatibility: false,
     });
     try {
       await client.deleteCollection(TEST_COLLECTION);
@@ -415,6 +420,7 @@ describe("Init Script Verification", () => {
     const client = new QdrantClient({
       url: QDRANT_URL,
       apiKey: QDRANT_API_KEY,
+      checkCompatibility: false,
     });
 
     // Check if production collection exists
