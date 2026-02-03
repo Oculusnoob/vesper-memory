@@ -21,14 +21,14 @@ You now have **two separate Vesper instances** running:
   - `vesper-embedding`
 
 ### 2. Development Vesper (Testing)
-- **Location**: `/Users/fitzy/Documents/MemoryProject/`
+- **Location**: `~/.vesper-dev/`
 - **MCP Name**: `vesper-dev`
 - **Use Case**: Testing changes while working on Vesper
 - **Ports** (custom to avoid conflicts):
   - Redis: `6380`
   - Qdrant: `6334`
   - Embedding: `8001`
-- **Database**: `/Users/fitzy/Documents/MemoryProject/data/memory.db`
+- **Database**: `~/.vesper-dev/data/memory.db`
 - **Docker Containers**:
   - `vesper-dev-redis`
   - `vesper-dev-qdrant`
@@ -55,15 +55,20 @@ This means:
 
 ## Switching Between Instances
 
-Use Claude Code's MCP commands to switch:
+**Important**: Only enable one MCP server at a time to avoid confusion about where memories are stored.
 
-```bash
-# Use personal Vesper (stable, for other projects)
-/mcp vesper-personal
+### Via Claude Code UI
 
-# Use development Vesper (for testing changes)
-/mcp vesper-dev
-```
+Use the MCP settings UI to toggle servers:
+
+1. Open MCP settings (command palette: "MCP: Configure Servers" or similar)
+2. **When working on other projects**: Enable `vesper-personal`, disable `vesper-dev`
+3. **When developing Vesper**: Enable `vesper-dev`, disable `vesper-personal`
+4. Restart Claude Code after toggling
+
+### Why Toggle?
+
+Both servers provide the same tools (`store_memory`, `retrieve_memory`, etc.), so having both enabled can be confusing. By enabling only one at a time, you have explicit control over where your memories are stored.
 
 ## Development Workflow
 
@@ -110,12 +115,13 @@ docker-compose down
 
 Each instance has completely separate data:
 - **Personal**: `~/.vesper/data/memory.db`
-- **Development**: `./data/memory.db`
+- **Development**: `~/.vesper-dev/data/memory.db`
 
 This means:
 - Dev testing won't pollute your personal memories
 - You can experiment freely in dev without risk
 - Personal Vesper remains stable during development
+- Both use user-level storage (not in project directories)
 
 ## Port Reference
 
