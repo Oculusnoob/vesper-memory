@@ -287,7 +287,13 @@ If you're developing Vesper itself, you need a different MCP configuration to us
 3. Reconnect MCP server with `/mcp` in Claude Code
 4. Test your changes with the local build
 
-When you open the Vesper project in Claude Code, Docker containers automatically start using `vesper-dev` ports (6380, 6334, 8001) to avoid conflicts with `vesper-personal`.
+**Automatic Docker Management**:
+- Opening Vesper project → Starts `vesper-dev` containers (ports 6380, 6334, 8001)
+- Opening other projects → Starts `vesper-personal` containers (ports 6379, 6333, 8000)
+- Closing Claude Code → Stops running containers
+- Only one instance runs at a time
+
+**⚠️ Important**: When Claude Code first starts, you may need to manually reconnect to the MCP server using `/mcp` → "Reconnect" because Docker containers start before the MCP connects, which can cause improper configuration until reconnection.
 
 ---
 
@@ -629,6 +635,21 @@ LOG_LEVEL=info
 ---
 
 ## 🔧 Troubleshooting
+
+### MCP Connection Issues After Startup
+
+**Symptom**: Vesper tools don't work immediately after Claude Code starts, or you see connection errors.
+
+**Cause**: Docker containers start before the MCP server connects, causing initialization timing issues.
+
+**Solution**: Manually reconnect to the MCP server:
+
+1. Run `/mcp` in Claude Code
+2. Find the active Vesper instance (vesper-dev or vesper-personal)
+3. Click "Reconnect" on the MCP server
+4. Test with `get_stats` or `list_recent` tool
+
+This ensures the MCP server properly connects to the Docker services that are already running.
 
 ### Vesper Not Showing Up in Claude Code
 

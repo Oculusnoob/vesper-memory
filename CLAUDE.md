@@ -50,6 +50,9 @@ npm run dev
 - Closing Claude Code → Stops running containers
 - Only one instance runs at a time
 
+**⚠️ Important startup note:**
+When Claude Code first starts, you may need to manually reconnect to the active MCP server using `/mcp` → "Reconnect". This is because Docker containers start before the MCP connects, which can cause improper initialization until reconnection. This is a known timing issue and the reconnect step ensures proper configuration.
+
 ### User-Level Storage
 
 All data is stored at `~/.vesper/` (user-level) instead of project directories:
