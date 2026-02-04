@@ -25,8 +25,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm install
 npm run build
 
-# Start infrastructure (3 services: Redis, Qdrant, Embedding)
-docker-compose up -d
+# Install globally (required for MCP server to work)
+npm run build:global
+
+# Docker starts automatically when Claude Code opens this project
+# (Uses vesper-dev instance via local .claude/mcp_config.json)
 
 # Run tests
 npm test                    # 632 tests should pass
@@ -34,6 +37,18 @@ npm test                    # 632 tests should pass
 # Run MCP server (development mode)
 npm run dev
 ```
+
+### MCP Configuration
+
+**Two instances available:**
+- **vesper-personal**: Global config (`~/.claude/mcp_config.json`) - for all projects
+- **vesper-dev**: Local config (`.claude/mcp_config.json`) - for Vesper development only
+
+**Automatic Docker management:**
+- Opening Vesper project → Starts vesper-dev containers
+- Opening other projects → Starts vesper-personal containers
+- Closing Claude Code → Stops running containers
+- Only one instance runs at a time
 
 ### User-Level Storage
 
@@ -98,12 +113,31 @@ src/
 │   ├── semantic-memory.ts       # SQLite + HippoRAG
 │   └── skill-library.ts         # Procedural memory
 ├── consolidation/
-│   └── pipeline.ts              # Nightly consolidation
+│   └── pipeline.ts              # Startup consolidation
+├── scheduler/
+│   └── consolidation-scheduler.ts  # 3 AM backup scheduler
 ├── synthesis/
 │   └── conflict-detector.ts     # Conflict detection
 └── utils/
     └── validation.ts            # Zod schemas
 ```
+
+### Consolidation Pipeline
+
+**When it runs**: Automatically on MCP server startup (non-blocking)
+
+**What it does**:
+1. Extract entities and relationships from working memory
+2. Build knowledge graph (HippoRAG)
+3. Apply temporal decay to old memories
+4. Detect conflicts (never auto-resolves)
+5. Prune weak relationships
+6. Extract skills from conversations
+7. Create backup metadata
+
+**Performance**: < 1 second for typical sessions (5-20 memories)
+
+**Backup scheduler**: Also runs at 3 AM daily (if MCP server is running)
 
 ---
 
@@ -135,11 +169,26 @@ Smart router classifies queries into 6 types:
 
 ## Development Commands
 
+### Building & Installation
+
+```bash
+# Build TypeScript
+npm run build
+
+# Build and reinstall globally (use after code changes)
+npm run build:global
+
+# Reinstall global command (fixes broken symlinks)
+npm run reinstall
+```
+
+**Important**: After modifying source code, run `npm run build:global` to ensure the global `vesper-server` command stays in sync with your changes.
+
 ### Testing
 
 ```bash
 # Run all tests
-npm test                    # 151 tests
+npm test                    # 632 tests
 
 # Run specific test suites
 npm test tests/router.test.ts

@@ -120,7 +120,7 @@ Your memory system has three layers:
 │   • 7-day TTL                           │
 │   • <5ms retrieval                      │
 └─────────────────────────────────────────┘
-                  ↓ (nightly consolidation)
+            ↓ (startup consolidation)
 ┌─────────────────────────────────────────┐
 │   Semantic Memory (SQLite + Qdrant)     │
 │   • Long-term knowledge graph           │
@@ -287,7 +287,9 @@ If SQLite shows `:memory:` instead of file path:
 
 ### Consolidation Pipeline
 
-Memories automatically consolidate from working → semantic layer nightly at 3 AM.
+Memories automatically consolidate from working → semantic layer when the MCP server starts (each time Claude Code restarts). This happens in the background without blocking server startup.
+
+**Backup scheduler**: Also runs at 3 AM daily (if MCP server is running).
 
 To trigger manually (for testing):
 ```bash

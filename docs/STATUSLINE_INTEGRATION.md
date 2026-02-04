@@ -16,7 +16,8 @@ Checks the health of Vesper's required Docker services:
 #!/bin/bash
 # Required services for Vesper
 REQUIRED_SERVICES=("redis" "qdrant" "embedding")
-VESPER_DIR="/Users/fitzy/Documents/MemoryProject"
+# Dynamically detect Vesper directory
+VESPER_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 
 # Checks:
 # 1. Is Docker running?

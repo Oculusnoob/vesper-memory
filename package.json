@@ -55,6 +55,8 @@
     "postinstall": "node scripts/postinstall.js",
     "dev": "node --loader ts-node/esm src/server.ts",
     "build": "tsc",
+    "build:global": "npm run build && npm install -g .",
+    "reinstall": "npm install -g .",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "benchmark": "vitest run tests/benchmarks/memory-performance.test.ts",

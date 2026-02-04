@@ -249,6 +249,46 @@ claude mcp add vesper --transport stdio --scope user -- node ~/.vesper/dist/serv
 # 6. Restart Claude Code
 ```
 
+### Development Setup (For Vesper Contributors)
+
+If you're developing Vesper itself, you need a different MCP configuration to use your local development build:
+
+**Two MCP Instances**:
+- **vesper-personal** (`~/.claude/mcp_config.json`): For using Vesper across all projects
+  - Uses: `vesper-server` command (globally installed)
+  - Update with: `npm run build:global`
+
+- **vesper-dev** (`.claude/mcp_config.json`): For developing Vesper
+  - Uses: `node dist/server.js` (local development build)
+  - Update with: `npm run build`
+
+**Local Development MCP Config** (`.claude/mcp_config.json`):
+```json
+{
+  "mcpServers": {
+    "vesper-dev": {
+      "command": "node",
+      "args": ["/path/to/vesper/dist/server.js"],
+      "env": {
+        "REDIS_PORT": "6380",
+        "QDRANT_URL": "http://localhost:6334",
+        "SQLITE_DB": "~/.vesper-dev/data/memory.db",
+        "EMBEDDING_SERVICE_URL": "http://localhost:8001",
+        "NODE_ENV": "development"
+      }
+    }
+  }
+}
+```
+
+**Development Workflow**:
+1. Make code changes
+2. Run `npm run build` to rebuild
+3. Reconnect MCP server with `/mcp` in Claude Code
+4. Test your changes with the local build
+
+When you open the Vesper project in Claude Code, Docker containers automatically start using `vesper-dev` ports (6380, 6334, 8001) to avoid conflicts with `vesper-personal`.
+
 ---
 
 ## 🏗️ Architecture
@@ -492,7 +532,9 @@ vesper/
 │   │   ├── semantic-memory.ts       # SQLite + HippoRAG
 │   │   └── skill-library.ts         # Procedural memory
 │   ├── consolidation/
-│   │   └── pipeline.ts              # Nightly consolidation
+│   │   └── pipeline.ts              # Startup consolidation
+│   ├── scheduler/
+│   │   └── consolidation-scheduler.ts  # 3 AM backup scheduler
 │   ├── synthesis/
 │   │   └── conflict-detector.ts     # Conflict detection
 │   └── utils/

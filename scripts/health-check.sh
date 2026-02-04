@@ -3,7 +3,8 @@
 
 set -e
 
-PROJECT_DIR="/Users/fitzy/Documents/MemoryProject"
+# Dynamically detect project directory (script is in PROJECT_DIR/scripts/)
+PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "🔍 Memory System Health Check"
 echo "=============================="

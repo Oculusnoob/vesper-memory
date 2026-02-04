@@ -253,15 +253,18 @@ export class ConsolidationPipeline {
    */
   private createBackup(): void {
     const backupId = 'backup_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const now = new Date().toISOString();
 
     this.db.prepare(`
-      INSERT INTO backup_metadata (id, backup_type, backup_path, created_at, expires_at)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO backup_metadata (id, backup_timestamp, backup_type, status, backup_path, created_at, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
       backupId,
+      now,
       'consolidation',
+      'completed',
       './backups/' + backupId + '.db',
-      new Date().toISOString(),
+      now,
       new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
     );
   }

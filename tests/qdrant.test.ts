@@ -409,8 +409,9 @@ describe("HybridSearchEngine with API Key", () => {
 describe("Init Script Verification", () => {
   it("should have init-qdrant script in package.json", async () => {
     const fs = await import("fs/promises");
+    const path = await import("path");
     const packageJson = JSON.parse(
-      await fs.readFile("/Users/fitzy/Documents/MemoryProject/package.json", "utf-8")
+      await fs.readFile(path.join(process.cwd(), "package.json"), "utf-8")
     );
 
     expect(packageJson.scripts["init:qdrant"]).toBeDefined();

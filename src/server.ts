@@ -37,7 +37,6 @@ import { WorkingMemoryLayer } from "./memory-layers/working-memory.js";
 import { SemanticMemoryLayer } from "./memory-layers/semantic-memory.js";
 import { SkillLibrary } from "./memory-layers/skill-library.js";
 import { ConsolidationPipeline } from "./consolidation/pipeline.js";
-import { ConsolidationScheduler } from "./scheduler/consolidation-scheduler.js";
 import * as SmartRouter from "./router/smart-router.js";
 
 // Import better-sqlite3 constructor using createRequire
@@ -56,7 +55,6 @@ interface ConnectionPool {
   semanticMemory?: SemanticMemoryLayer;
   skillLibrary?: SkillLibrary;
   consolidationPipeline?: ConsolidationPipeline;
-  consolidationScheduler?: ConsolidationScheduler;
 }
 
 const connections: ConnectionPool = {};
@@ -401,22 +399,24 @@ async function initializeConnections(): Promise<void> {
         );
         console.error("[INFO] ✅ Consolidation pipeline initialized");
 
-        // Initialize Consolidation Scheduler (3 AM default)
-        connections.consolidationScheduler = new ConsolidationScheduler(
-          connections.consolidationPipeline,
-          { scheduleHour: 3, scheduleMinute: 0 },
-          (stats, error) => {
-            if (error) {
-              console.error("[SCHEDULER] Consolidation failed:", error.message);
-            } else if (stats) {
-              console.error(
-                `[SCHEDULER] Consolidation complete: ${stats.memoriesProcessed} memories, ${stats.skillsExtracted} skills`
-              );
-            }
+        // Run startup consolidation asynchronously (non-blocking)
+        // This runs every time the MCP server starts (when Claude Code restarts)
+        setImmediate(async () => {
+          try {
+            console.error("[INFO] 🔄 Running startup consolidation...");
+            const stats = await connections.consolidationPipeline!.consolidate();
+            console.error(
+              `[INFO] ✅ Startup consolidation complete: ${stats.memoriesProcessed} memories, ` +
+              `${stats.entitiesExtracted} entities, ${stats.conflictsDetected} conflicts, ` +
+              `${stats.skillsExtracted} skills in ${stats.duration}ms`
+            );
+          } catch (err) {
+            console.error(
+              "[WARN] Startup consolidation failed:",
+              err instanceof Error ? err.message : String(err)
+            );
           }
-        );
-        connections.consolidationScheduler.start();
-        console.error("[INFO] ✅ Consolidation scheduler started (3 AM daily)");
+        });
       } catch (err) {
         console.error(
           "[WARN] Consolidation pipeline initialization failed:",
@@ -1138,10 +1138,6 @@ async function main(): Promise<void> {
 // Cleanup handler for graceful shutdown
 function cleanup(): void {
   console.error('[INFO] Shutting down Vesper...');
-
-  if (connections.consolidationScheduler) {
-    connections.consolidationScheduler.stop();
-  }
 
   if (connections.redis) {
     connections.redis.disconnect();
