@@ -3,9 +3,12 @@
  *
  * Redis-based cache for last 5 conversations with 7-day TTL.
  * Simple but effective - instant recall for recent context.
+ *
+ * Enhanced with skill caching for lazy loading support.
  */
 
 import { Redis } from 'ioredis';
+import type { FullSkill, CachedSkill } from './skill-lazy-loading.js';
 
 export interface WorkingMemory {
   conversationId: string;
@@ -204,6 +207,132 @@ export class WorkingMemoryLayer {
       if (batch.length > 0) {
         await this.redis.del(...batch);
       }
+    }
+  }
+
+  /**
+   * Cache a loaded skill in working memory
+   *
+   * Part of lazy loading system - caches full skills to avoid re-loading.
+   * Default TTL: 1 hour (3600 seconds)
+   *
+   * @param skill - Full skill implementation to cache
+   * @param ttl - Time-to-live in seconds (default: 3600)
+   */
+  async cacheSkill(skill: FullSkill, ttl: number = 3600): Promise<void> {
+    const key = `skill:cache:${skill.id}`;
+    const cached: CachedSkill = {
+      skill,
+      loaded_at: new Date(),
+      access_count: 1,
+      ttl,
+    };
+
+    await this.redis.setex(key, ttl, JSON.stringify(cached));
+    console.debug(`[WorkingMemory] Cached skill: ${skill.name} (${skill.id}) for ${ttl}s`);
+  }
+
+  /**
+   * Get a cached skill from working memory
+   *
+   * Returns null if skill is not cached or has expired.
+   * Increments access count and updates cache on hit.
+   *
+   * @param skillId - Skill ID to retrieve
+   * @returns CachedSkill or null if not found
+   */
+  async getCachedSkill(skillId: string): Promise<CachedSkill | null> {
+    const key = `skill:cache:${skillId}`;
+    const data = await this.redis.get(key);
+
+    if (!data) {
+      return null;
+    }
+
+    const cached = JSON.parse(data) as CachedSkill;
+
+    // Increment access count
+    cached.access_count += 1;
+
+    // Update cache with new access count (keep same TTL)
+    const ttl = await this.redis.ttl(key);
+    if (ttl > 0) {
+      await this.redis.setex(key, ttl, JSON.stringify(cached));
+    }
+
+    console.debug(
+      `[WorkingMemory] Skill cache hit: ${cached.skill.name} ` +
+      `(access count: ${cached.access_count}, TTL: ${ttl}s)`
+    );
+
+    return cached;
+  }
+
+  /**
+   * Invalidate a cached skill
+   *
+   * Use when a skill is updated or deleted.
+   *
+   * @param skillId - Skill ID to invalidate
+   */
+  async invalidateSkillCache(skillId: string): Promise<void> {
+    const key = `skill:cache:${skillId}`;
+    await this.redis.del(key);
+    console.debug(`[WorkingMemory] Invalidated skill cache: ${skillId}`);
+  }
+
+  /**
+   * Get all cached skill IDs
+   *
+   * Useful for debugging and cache statistics.
+   *
+   * @returns Array of cached skill IDs
+   */
+  async getCachedSkillIds(): Promise<string[]> {
+    const pattern = 'skill:cache:*';
+    let cursor = '0';
+    const skillIds: string[] = [];
+
+    do {
+      const [nextCursor, keys] = await this.redis.scan(
+        cursor,
+        'MATCH', pattern,
+        'COUNT', 100
+      );
+      cursor = nextCursor;
+
+      // Extract skill IDs from keys
+      for (const key of keys) {
+        const skillId = key.replace('skill:cache:', '');
+        skillIds.push(skillId);
+      }
+    } while (cursor !== '0');
+
+    return skillIds;
+  }
+
+  /**
+   * Clear all cached skills
+   *
+   * Use for cache invalidation or testing.
+   */
+  async clearSkillCache(): Promise<void> {
+    let cursor = '0';
+    const keysToDelete: string[] = [];
+
+    do {
+      const [nextCursor, keys] = await this.redis.scan(
+        cursor,
+        'MATCH', 'skill:cache:*',
+        'COUNT', 100
+      );
+      cursor = nextCursor;
+      keysToDelete.push(...keys);
+    } while (cursor !== '0');
+
+    if (keysToDelete.length > 0) {
+      await this.redis.del(...keysToDelete);
+      console.debug(`[WorkingMemory] Cleared ${keysToDelete.length} cached skills`);
     }
   }
 }

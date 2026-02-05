@@ -141,6 +141,25 @@ export const RecordSkillOutcomeInputSchema = z.object({
 
 export type RecordSkillOutcomeInput = z.infer<typeof RecordSkillOutcomeInputSchema>;
 
+/**
+ * Schema for load_skill tool input
+ *
+ * Loads full skill implementation on-demand for execution.
+ * Part of lazy loading system to reduce token usage.
+ *
+ * Enforces:
+ * - skill_id is required and non-empty
+ * - skill_id must match expected format (skill_*)
+ */
+export const LoadSkillInputSchema = z.object({
+  skill_id: z.string()
+    .min(1, "skill_id cannot be empty")
+    .max(255, "skill_id cannot exceed 255 characters")
+    .regex(/^skill_[a-z0-9_]+$/i, "Invalid skill_id format (must be skill_*)"),
+});
+
+export type LoadSkillInput = z.infer<typeof LoadSkillInputSchema>;
+
 // ============================================================================
 // Internal Data Type Schemas
 // ============================================================================

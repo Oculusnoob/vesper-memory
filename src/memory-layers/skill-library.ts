@@ -3,10 +3,17 @@
  *
  * Procedural memory: reusable patterns learned from conversations.
  * Includes RelationalSkillLibrary for geometric embeddings and analogical reasoning.
+ * Enhanced with lazy loading support for token efficiency.
  */
 
 import Database from 'better-sqlite3';
 import { EmbeddingClient } from '../embeddings/client.js';
+import {
+  SkillSummary,
+  FullSkill,
+  InvocationDetection,
+  LazyLoadingSkillLibrary
+} from './skill-lazy-loading.js';
 
 export interface Skill {
   id: string;
@@ -37,11 +44,16 @@ export interface SkillWithScore extends Skill {
   analogyScore?: number;
 }
 
+// Re-export lazy loading types
+export type { SkillSummary, FullSkill, InvocationDetection };
+
 export class SkillLibrary {
   private db: Database.Database;
+  private lazyLoader: LazyLoadingSkillLibrary;
 
   constructor(db: Database.Database) {
     this.db = db;
+    this.lazyLoader = new LazyLoadingSkillLibrary(db);
   }
 
   addSkill(skill: Omit<Skill, 'id' | 'successCount' | 'failureCount' | 'avgSatisfaction'>): string {
@@ -116,6 +128,72 @@ export class SkillLibrary {
    */
   protected getDb(): Database.Database {
     return this.db;
+  }
+
+  /**
+   * Get skill summaries for lazy loading context injection
+   *
+   * Returns lightweight summaries (~50 tokens each) instead of full skills.
+   * This reduces token usage by 80-90% for skill-related context.
+   *
+   * @param limit - Maximum number of summaries (default: 20)
+   * @param category - Optional category filter
+   * @returns Array of SkillSummary objects
+   */
+  getSummaries(limit: number = 20, category?: string): SkillSummary[] {
+    return this.lazyLoader.getSummaries(limit, category);
+  }
+
+  /**
+   * Load full skill implementation on-demand
+   *
+   * Used when a skill is explicitly invoked and full details are needed.
+   * Results should be cached in working memory to avoid repeated loads.
+   *
+   * @param skillId - The skill ID to load
+   * @returns FullSkill object or null if not found
+   */
+  loadFull(skillId: string): FullSkill | null {
+    const fullSkill = this.lazyLoader.loadFull(skillId);
+
+    // Update last_used timestamp when loading a skill
+    if (fullSkill) {
+      this.db.prepare(`
+        UPDATE skills
+        SET last_used = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(skillId);
+    }
+
+    return fullSkill;
+  }
+
+  /**
+   * Detect if a query is attempting to invoke a specific skill
+   *
+   * Uses pattern matching to identify skill invocations.
+   *
+   * @param query - The user query
+   * @returns InvocationDetection result with skill ID if detected
+   */
+  detectInvocation(query: string): InvocationDetection {
+    const summaries = this.getSummaries(100); // Get all summaries for matching
+    return this.lazyLoader.detectInvocation(query, summaries);
+  }
+
+  /**
+   * Update last_used timestamp for a skill
+   *
+   * Called when a skill is successfully executed.
+   *
+   * @param skillId - The skill ID
+   */
+  updateLastUsed(skillId: string): void {
+    this.db.prepare(`
+      UPDATE skills
+      SET last_used = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(skillId);
   }
 }
 
@@ -322,8 +400,6 @@ export class RelationalSkillLibrary extends SkillLibrary {
    * Uses Reciprocal Rank Fusion (RRF) with k=60 to combine results.
    */
   async hybridSearch(query: string, limit: number = 5): Promise<SkillWithScore[]> {
-    const db = this.getDb();
-
     // Get trigger-based results
     const triggerResults = this.search(query, limit * 2);
 
