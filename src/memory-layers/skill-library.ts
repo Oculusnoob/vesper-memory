@@ -59,13 +59,22 @@ export class SkillLibrary {
   addSkill(skill: Omit<Skill, 'id' | 'successCount' | 'failureCount' | 'avgSatisfaction'>): string {
     const id = 'skill_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
+    // Generate summary from description (first sentence or 100 chars)
+    const summary = skill.description.length <= 100
+      ? skill.description
+      : skill.description.substring(0, 97) + '...';
+
     this.db.prepare(`
-      INSERT INTO skills (id, name, description, category, triggers, success_count, failure_count, avg_user_satisfaction)
-      VALUES (?, ?, ?, ?, ?, 0, 0, 0.5)
+      INSERT INTO skills (
+        id, name, description, summary, category, triggers,
+        success_count, failure_count, avg_user_satisfaction, is_archived
+      )
+      VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0.5, 0)
     `).run(
       id,
       skill.name,
       skill.description,
+      summary,
       skill.category,
       JSON.stringify(skill.triggers)
     );

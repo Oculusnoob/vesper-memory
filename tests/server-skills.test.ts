@@ -32,17 +32,21 @@ describe('Skill Query Router Integration', () => {
     // Create in-memory database for testing
     db = new Database(':memory:');
 
-    // Create skills table
+    // Create skills table (matches production schema with lazy loading fields)
     db.exec(`
       CREATE TABLE skills (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT NOT NULL,
+        summary TEXT,
         category TEXT NOT NULL,
         triggers TEXT NOT NULL,
         success_count INTEGER DEFAULT 0,
         failure_count INTEGER DEFAULT 0,
-        avg_user_satisfaction REAL DEFAULT 0.5
+        avg_user_satisfaction REAL DEFAULT 0.5,
+        is_archived INTEGER DEFAULT 0,
+        last_used TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
@@ -120,7 +124,8 @@ describe('Skill Query Router Integration', () => {
       skillLibrary.recordSuccess(id1, 0.95);
       skillLibrary.recordSuccess(id2, 0.5);
 
-      const results = await handleSkillQueryDirect('analyze', context);
+      // Use a query that matches via name/category (returns summaries) not exact trigger (invocation)
+      const results = await handleSkillQueryDirect('analysis', context);
 
       expect(results.length).toBe(2);
       expect(results[0].content).toContain('High Quality');
@@ -302,17 +307,21 @@ describe('record_skill_outcome Integration', () => {
     // Create in-memory database for testing
     db = new Database(':memory:');
 
-    // Create skills table
+    // Create skills table (matches production schema with lazy loading fields)
     db.exec(`
       CREATE TABLE skills (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT NOT NULL,
+        summary TEXT,
         category TEXT NOT NULL,
         triggers TEXT NOT NULL,
         success_count INTEGER DEFAULT 0,
         failure_count INTEGER DEFAULT 0,
-        avg_user_satisfaction REAL DEFAULT 0.5
+        avg_user_satisfaction REAL DEFAULT 0.5,
+        is_archived INTEGER DEFAULT 0,
+        last_used TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
