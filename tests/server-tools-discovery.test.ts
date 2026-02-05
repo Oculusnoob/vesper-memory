@@ -25,6 +25,7 @@ const EXPECTED_TOOLS = [
   'vesper_disable',
   'vesper_status',
   'record_skill_outcome',
+  'load_skill',  // Lazy loading tool for on-demand skill loading
 ];
 
 /**
@@ -62,6 +63,10 @@ const EXPECTED_TOOL_SCHEMAS = {
   record_skill_outcome: {
     required: ['skill_id', 'outcome'],
     properties: ['skill_id', 'outcome', 'satisfaction'],
+  },
+  load_skill: {
+    required: ['skill_id'],
+    properties: ['skill_id'],
   },
 };
 
@@ -417,7 +422,7 @@ describe('Environment Independence', () => {
     // Count tool definitions
     const toolMatches = source.match(/{\s*name:\s*["'][^"']+["'],\s*description:/g);
     expect(toolMatches).toBeDefined();
-    expect(toolMatches!.length).toBe(8);
+    expect(toolMatches!.length).toBe(9);  // Updated for load_skill tool
   });
 });
 

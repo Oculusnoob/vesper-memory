@@ -182,6 +182,7 @@ CREATE TABLE IF NOT EXISTS skills (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   description TEXT NOT NULL,
+  summary TEXT,  -- Lightweight description for context injection (~20 words, ~50 tokens)
   category TEXT,  -- Optional categorization: 'data_analysis', 'writing', 'coding', etc.
 
   -- Executable logic (references or code)
@@ -202,6 +203,7 @@ CREATE TABLE IF NOT EXISTS skills (
   used_by_skills TEXT,  -- JSON array of skill IDs that use this skill
 
   -- Metadata
+  is_archived INTEGER DEFAULT 0,  -- Soft deletion flag
   created_from TEXT,  -- Conversation ID where skill was extracted
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_used TIMESTAMP,
@@ -216,8 +218,19 @@ CREATE TABLE IF NOT EXISTS skills (
 CREATE INDEX IF NOT EXISTS idx_skills_name ON skills(name);
 CREATE INDEX IF NOT EXISTS idx_skills_category ON skills(category);
 CREATE INDEX IF NOT EXISTS idx_skills_created_at ON skills(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_skills_last_used ON skills(last_used DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_success_rate ON skills(success_count, failure_count);
+
+-- Lazy loading indexes for token-efficient skill retrieval
+CREATE INDEX IF NOT EXISTS idx_skills_lazy_loading
+  ON skills(is_archived, avg_user_satisfaction DESC, success_count DESC);
+
+CREATE INDEX IF NOT EXISTS idx_skills_last_used
+  ON skills(last_used DESC)
+  WHERE is_archived = 0 AND last_used IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_skills_category_quality
+  ON skills(category, avg_user_satisfaction DESC, success_count DESC)
+  WHERE is_archived = 0;
 
 -- Index for finding high-confidence skills (used in skill-based retrieval)
 CREATE INDEX IF NOT EXISTS idx_skills_reliability
