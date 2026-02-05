@@ -385,6 +385,24 @@ curl http://localhost:8000/health
 
 ---
 
+## Research Foundations
+
+Vesper is built on peer-reviewed research in neuroscience and NLP:
+
+**Core Architecture**:
+- [HippoRAG](https://arxiv.org/abs/2405.14831) - Knowledge graph with Personalized PageRank (NeurIPS 2024)
+- [Hippocampal Indexing Theory](https://onlinelibrary.wiley.com/doi/10.1002/hipo.20350) - Three-layer memory inspiration
+- [Voyager](https://arxiv.org/abs/2305.16291) - Skill library design
+
+**Retrieval & Embeddings**:
+- [BGE-large-en-v1.5](https://huggingface.co/BAAI/bge-large-en-v1.5) - 1024-dim semantic embeddings
+- [Reciprocal Rank Fusion](https://dl.acm.org/doi/10.1145/1571941.1572114) - Hybrid search fusion (SIGIR 2009)
+- [Word2Vec](https://arxiv.org/abs/1301.3781) - Vector space semantic relationships
+
+See [README.md](./README.md#research--credits) for full citations and acknowledgments.
+
+---
+
 **Status**: Simple, Local, Ready to Use
 
 **For Claude Agents**: This memory system helps you learn user preferences, maintain context across conversations, and get better over time. Use the four MCP tools to store and retrieve memories intelligently.

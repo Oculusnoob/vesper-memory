@@ -66,3 +66,11 @@ async function getEmbedding(text: string): Promise<number[]> {
 - **Dimensions**: 1024
 - **Throughput**: ~100-200 embeddings/sec (CPU), ~1000+/sec (GPU)
 - **Latency**: ~10-50ms per text (CPU), ~1-5ms (GPU)
+
+## Credits
+
+This service uses [BAAI/bge-large-en-v1.5](https://huggingface.co/BAAI/bge-large-en-v1.5), an open-source embedding model developed by the Beijing Academy of Artificial Intelligence (BAAI).
+
+**Model Repository**: [FlagEmbedding](https://github.com/FlagOpen/FlagEmbedding)
+
+BGE (BAAI General Embedding) models are trained using RetroMAE and contrastive learning on large-scale pairs data, achieving state-of-the-art performance on semantic retrieval tasks.
