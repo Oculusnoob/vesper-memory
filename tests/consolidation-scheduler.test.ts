@@ -107,10 +107,16 @@ describe('ConsolidationScheduler', () => {
 
       CREATE TABLE backup_metadata (
         id TEXT PRIMARY KEY,
+        backup_timestamp TIMESTAMP NOT NULL,
         backup_type TEXT NOT NULL,
-        backup_path TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        expires_at TEXT NOT NULL
+        status TEXT NOT NULL,
+        backup_path TEXT,
+        file_size_bytes INTEGER,
+        entities_count INTEGER,
+        relationships_count INTEGER,
+        skills_count INTEGER,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP
       );
     `);
 

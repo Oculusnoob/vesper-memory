@@ -352,12 +352,16 @@ describe('Phase 2: Skill Embedding Generation', () => {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT NOT NULL,
+        summary TEXT,
         category TEXT NOT NULL,
         triggers TEXT NOT NULL,
         embedding BLOB,
         success_count INTEGER DEFAULT 0,
         failure_count INTEGER DEFAULT 0,
-        avg_user_satisfaction REAL DEFAULT 0.5
+        avg_user_satisfaction REAL DEFAULT 0.5,
+        is_archived INTEGER DEFAULT 0,
+        last_used TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE skill_relationships (
@@ -538,12 +542,16 @@ describe('Phase 3: Geometric Search', () => {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT NOT NULL,
+        summary TEXT,
         category TEXT NOT NULL,
         triggers TEXT NOT NULL,
         embedding BLOB,
         success_count INTEGER DEFAULT 0,
         failure_count INTEGER DEFAULT 0,
-        avg_user_satisfaction REAL DEFAULT 0.5
+        avg_user_satisfaction REAL DEFAULT 0.5,
+        is_archived INTEGER DEFAULT 0,
+        last_used TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE skill_relationships (
@@ -752,12 +760,16 @@ describe('Phase 4: Relational Vectors', () => {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT NOT NULL,
+        summary TEXT,
         category TEXT NOT NULL,
         triggers TEXT NOT NULL,
         embedding BLOB,
         success_count INTEGER DEFAULT 0,
         failure_count INTEGER DEFAULT 0,
-        avg_user_satisfaction REAL DEFAULT 0.5
+        avg_user_satisfaction REAL DEFAULT 0.5,
+        is_archived INTEGER DEFAULT 0,
+        last_used TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE skill_relationships (
@@ -1068,12 +1080,16 @@ describe('Phase 5: Integration', () => {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT NOT NULL,
+        summary TEXT,
         category TEXT NOT NULL,
         triggers TEXT NOT NULL,
         embedding BLOB,
         success_count INTEGER DEFAULT 0,
         failure_count INTEGER DEFAULT 0,
-        avg_user_satisfaction REAL DEFAULT 0.5
+        avg_user_satisfaction REAL DEFAULT 0.5,
+        is_archived INTEGER DEFAULT 0,
+        last_used TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE skill_relationships (
