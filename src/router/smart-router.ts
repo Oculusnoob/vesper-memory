@@ -662,14 +662,16 @@ export function initSkillHandler(skillLibrary: SkillLibrary): void {
 }
 
 /**
- * Direct skill query handler - optimized for low latency
+ * Direct skill query handler - optimized for low latency with lazy loading
  *
  * This handler uses trigger-based matching in SkillLibrary:
- * 1. Search skill library for matching triggers
- * 2. Calculate similarity based on match score and satisfaction
- * 3. Return results sorted by relevance
+ * 1. Detect if query is invoking a specific skill
+ * 2. If invocation detected, load full skill implementation
+ * 3. Otherwise, return lightweight summaries for context
+ * 4. Calculate similarity based on match score and satisfaction
  *
- * Performance target: <20ms
+ * Performance target: <20ms (summary), <30ms (full load)
+ * Token reduction: 80-90% (summaries vs full descriptions)
  *
  * @param query - The skill query
  * @param _context - Routing context (userId, etc.)
@@ -679,7 +681,7 @@ export async function handleSkillQueryDirect(
   query: string,
   _context: RoutingContext
 ): Promise<MemoryResult[]> {
-  console.debug(`[Router] Handling skill query (optimized): "${query}"`);
+  console.debug(`[Router] Handling skill query (lazy loading): "${query}"`);
 
   if (!skillLibraryLayer) {
     console.debug(`[Router] Skill library not initialized for skill queries`);
@@ -691,32 +693,67 @@ export async function handleSkillQueryDirect(
     return [];
   }
 
-  // Search skill library using trigger matching
-  const skills = skillLibraryLayer.search(query, 10);
+  // Step 1: Detect if this is a skill invocation
+  const invocation = skillLibraryLayer.detectInvocation(query);
 
-  if (skills.length === 0) {
-    console.debug(`[Router] No skills found for query: "${query}"`);
+  if (invocation.is_invocation && invocation.skill_id) {
+    console.debug(
+      `[Router] Skill invocation detected: ${invocation.skill_id} ` +
+      `(confidence: ${invocation.confidence}, pattern: ${invocation.matched_pattern})`
+    );
+
+    // Load full skill implementation for invocation
+    const fullSkill = skillLibraryLayer.loadFull(invocation.skill_id);
+
+    if (fullSkill) {
+      return [{
+        id: fullSkill.id,
+        source: "procedural" as const,
+        content: `${fullSkill.name}: ${fullSkill.description}`,
+        similarity: invocation.confidence,
+        timestamp: fullSkill.last_used || new Date(),
+        confidence: fullSkill.avg_user_satisfaction,
+      }];
+    }
+  }
+
+  // Step 2: No invocation - return lightweight summaries
+  console.debug(`[Router] No invocation detected, returning skill summaries`);
+
+  // Get skill summaries (lightweight, ~50 tokens each)
+  const summaries = skillLibraryLayer.getSummaries(10);
+
+  // Filter summaries by trigger matching
+  const matchingSummaries = summaries.filter(summary => {
+    const queryLower = query.toLowerCase();
+    return summary.triggers.some(trigger =>
+      queryLower.includes(trigger.toLowerCase()) ||
+      trigger.toLowerCase().includes(queryLower)
+    ) || summary.name.toLowerCase().includes(queryLower);
+  });
+
+  if (matchingSummaries.length === 0) {
+    console.debug(`[Router] No matching skill summaries found for: "${query}"`);
     return [];
   }
 
   // Transform to MemoryResult format
-  const results: MemoryResult[] = skills.map((skill) => {
-    // Calculate similarity based on satisfaction and match quality
-    // avgSatisfaction ranges from 0-1, we use it as base similarity
-    const similarity = Math.max(0.1, skill.avgSatisfaction);
-
+  const results: MemoryResult[] = matchingSummaries.map((summary) => {
     return {
-      id: skill.id,
+      id: summary.id,
       source: "procedural" as const,
-      content: `${skill.name}: ${skill.description}`,
-      similarity,
-      timestamp: new Date(), // Skills don't have timestamps, use current
-      confidence: skill.avgSatisfaction,
+      content: `${summary.name}: ${summary.summary}`, // Use summary instead of full description
+      similarity: summary.quality_score,
+      timestamp: summary.last_used || new Date(),
+      confidence: summary.quality_score,
     };
   });
 
-  console.debug(`[Router] Found ${results.length} matching skills`);
+  console.debug(
+    `[Router] Found ${results.length} matching skill summaries ` +
+    `(token reduction: ~${Math.round((1 - results.length / 10) * 100)}%)`
+  );
 
-  // Already sorted by skill library (satisfaction + success count)
+  // Already sorted by quality score
   return results;
 }
