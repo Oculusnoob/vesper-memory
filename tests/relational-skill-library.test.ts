@@ -39,11 +39,15 @@ describe('Phase 1: Database Schema Extension', () => {
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
           description TEXT NOT NULL,
+          summary TEXT,
           category TEXT NOT NULL,
           triggers TEXT NOT NULL,
           success_count INTEGER DEFAULT 0,
           failure_count INTEGER DEFAULT 0,
-          avg_user_satisfaction REAL DEFAULT 0.5
+          avg_user_satisfaction REAL DEFAULT 0.5,
+          is_archived INTEGER DEFAULT 0,
+          last_used TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
       `);
 
@@ -66,12 +70,16 @@ describe('Phase 1: Database Schema Extension', () => {
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
           description TEXT NOT NULL,
+          summary TEXT,
           category TEXT NOT NULL,
           triggers TEXT NOT NULL,
           embedding BLOB,
           success_count INTEGER DEFAULT 0,
           failure_count INTEGER DEFAULT 0,
-          avg_user_satisfaction REAL DEFAULT 0.5
+          avg_user_satisfaction REAL DEFAULT 0.5,
+          is_archived INTEGER DEFAULT 0,
+          last_used TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
       `);
 
@@ -103,12 +111,16 @@ describe('Phase 1: Database Schema Extension', () => {
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
           description TEXT NOT NULL,
+          summary TEXT,
           category TEXT NOT NULL,
           triggers TEXT NOT NULL,
           embedding BLOB,
           success_count INTEGER DEFAULT 0,
           failure_count INTEGER DEFAULT 0,
-          avg_user_satisfaction REAL DEFAULT 0.5
+          avg_user_satisfaction REAL DEFAULT 0.5,
+          is_archived INTEGER DEFAULT 0,
+          last_used TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
       `);
 
@@ -273,12 +285,16 @@ describe('Phase 1: Database Schema Extension', () => {
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
           description TEXT NOT NULL,
+          summary TEXT,
           category TEXT NOT NULL,
           triggers TEXT NOT NULL,
           embedding BLOB,
           success_count INTEGER DEFAULT 0,
           failure_count INTEGER DEFAULT 0,
-          avg_user_satisfaction REAL DEFAULT 0.5
+          avg_user_satisfaction REAL DEFAULT 0.5,
+          is_archived INTEGER DEFAULT 0,
+          last_used TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
 
         CREATE INDEX IF NOT EXISTS idx_skills_embedding ON skills(embedding) WHERE embedding IS NOT NULL;

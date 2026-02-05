@@ -25,11 +25,15 @@ describe('SkillLibrary', () => {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT NOT NULL,
+        summary TEXT,
         category TEXT NOT NULL,
         triggers TEXT NOT NULL,
         success_count INTEGER DEFAULT 0,
         failure_count INTEGER DEFAULT 0,
-        avg_user_satisfaction REAL DEFAULT 0.5
+        avg_user_satisfaction REAL DEFAULT 0.5,
+        is_archived INTEGER DEFAULT 0,
+        last_used TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
