@@ -7,14 +7,14 @@ Visual representation of performance metrics across versions.
 ## Query Latency Trends (Lower is Better)
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#4CAF50'}}}%%
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#6365e7', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#8183dd', 'lineColor':'#6365e7', 'secondaryColor':'#8183dd', 'tertiaryColor':'#a8b4f7'}}}%%
 xychart-beta
     title "Query Latency by Version (ms)"
     x-axis ["v0.2.0", "v0.3.0", "v0.3.2", "v0.4.0"]
     y-axis "Latency (ms)" 0 --> 18
-    line [1.0, 1.4, 0.2, 0.2] "P50"
-    line [3.5, 7.3, 0.3, 0.4] "P95"
-    line [8.4, 16.8, 0.4, 0.6] "P99"
+    line "P50" [1.0, 1.4, 0.2, 0.2]
+    line "P95" [3.5, 7.3, 0.3, 0.4]
+    line "P99" [8.4, 16.8, 0.4, 0.6]
 ```
 
 **Analysis**: Major improvement from v0.3.0 to v0.3.2 (-85% latency). v0.2.0 → v0.3.0 showed regression due to multi-hop reasoning complexity. v0.3.2 → v0.4.0 maintains excellent performance while adding lazy loading and relational embeddings.
@@ -24,12 +24,12 @@ xychart-beta
 ## Token Efficiency (Lower is Better)
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#2196F3'}}}%%
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#8183dd', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#6365e7'}}}%%
 xychart-beta
     title "Token Usage Per Skill (tokens)"
     x-axis ["v0.3.x Full Loading", "v0.4.0 Lazy Loading"]
     y-axis "Tokens" 0 --> 550
-    bar [500, 50]
+    bar "Tokens" [500, 50]
 ```
 
 **90% Reduction**: Lazy loading reduces token usage from ~500 tokens/skill to ~50 tokens/skill.
@@ -39,12 +39,12 @@ xychart-beta
 ## Memory System Performance Gains
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#FF9800'}}}%%
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#6365e7', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#8183dd'}}}%%
 xychart-beta
     title "Performance Improvement: With vs Without Memory (%)"
     x-axis ["Query Latency P50", "Query Latency P95", "Query Latency P99", "Retrieval Accuracy", "Context Retention", "Token Efficiency", "Consistency"]
     y-axis "Improvement %" 0 --> 5000
-    bar [95.2, 93.9, 90.7, 100, 4900, 90, 49.3]
+    bar "Improvement" [95.2, 93.9, 90.7, 100, 4900, 90, 49.3]
 ```
 
 **Highlights**:
@@ -58,24 +58,24 @@ xychart-beta
 ## Baseline Comparison: With vs Without Vesper
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#667eea'}}}%%
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#6365e7', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#8183dd', 'lineColor':'#6365e7', 'secondaryColor':'#8183dd'}}}%%
 xychart-beta
     title "Performance vs Baseline (P95 Latency)"
     x-axis ["v0.2.0", "v0.3.0", "v0.3.2", "v0.4.0"]
     y-axis "Latency (ms)" 0 --> 8
-    line [7.0, 7.0, 7.0, 7.0] "Baseline (Without Vesper)"
-    line [3.5, 7.3, 0.3, 0.4] "With Vesper"
+    line "Baseline (Without Vesper)" [7.0, 7.0, 7.0, 7.0]
+    line "With Vesper" [3.5, 7.3, 0.3, 0.4]
 ```
 
 **Impact**: Vesper achieves 50-95% latency reduction compared to baseline across all versions. v0.3.2 onwards delivers sub-millisecond P95 latency (94% faster than baseline).
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#4CAF50'}}}%%
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#8183dd', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#6365e7'}}}%%
 xychart-beta
     title "All Percentiles vs Baseline"
     x-axis ["Baseline P50", "v0.4.0 P50", "Baseline P95", "v0.4.0 P95", "Baseline P99", "v0.4.0 P99"]
     y-axis "Latency (ms)" 0 --> 8
-    bar [4.5, 0.2, 7.0, 0.4, 7.5, 0.6]
+    bar "Latency" [4.5, 0.2, 7.0, 0.4, 7.5, 0.6]
 ```
 
 **Summary**: Vesper v0.4.0 delivers 95.6% (P50), 94.3% (P95), and 92.0% (P99) latency reduction vs baseline.
@@ -85,14 +85,14 @@ xychart-beta
 ## Latency Distribution Comparison
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#9C27B0'}}}%%
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#6365e7', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#8183dd', 'lineColor':'#6365e7', 'secondaryColor':'#8183dd', 'tertiaryColor':'#a8b4f7'}}}%%
 xychart-beta
     title "Latency Evolution Across All Percentiles"
     x-axis ["Baseline", "v0.2.0", "v0.3.0", "v0.3.2", "v0.4.0"]
     y-axis "Latency (ms)" 0 --> 18
-    line [4.5, 1.0, 1.4, 0.2, 0.2] "P50"
-    line [7.0, 3.5, 7.3, 0.3, 0.4] "P95"
-    line [7.5, 8.4, 16.8, 0.4, 0.6] "P99"
+    line "P50" [4.5, 1.0, 1.4, 0.2, 0.2]
+    line "P95" [7.0, 3.5, 7.3, 0.3, 0.4]
+    line "P99" [7.5, 8.4, 16.8, 0.4, 0.6]
 ```
 
 **Impact**: Vesper v0.3.2+ consistently delivers sub-millisecond response times across all percentiles, representing a 90-95% improvement vs baseline.
@@ -113,7 +113,7 @@ xychart-beta
 ## Performance vs Features Trade-off
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#00BCD4'}}}%%
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#6365e7', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#8183dd', 'quadrant1Fill':'#8183dd', 'quadrant2Fill':'#6365e7', 'quadrant3Fill':'#0b0e25', 'quadrant4Fill':'#a8b4f7'}}}%%
 quadrantChart
     title Performance vs Features Matrix
     x-axis Low Features --> High Features
@@ -160,7 +160,7 @@ quadrantChart
 ### Planned for v0.5.0
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#4CAF50'}}}%%
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#6365e7', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#8183dd', 'taskBkgColor':'#8183dd', 'taskTextColor':'#a8b4f7', 'taskBorderColor':'#6365e7', 'activeTaskBkgColor':'#6365e7', 'activeTaskBorderColor':'#a8b4f7'}}}%%
 gantt
     title Optimization Roadmap
     dateFormat YYYY-MM-DD
