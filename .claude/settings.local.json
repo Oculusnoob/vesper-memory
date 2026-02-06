@@ -47,7 +47,11 @@
       "Bash(/Users/fitzy/.claude/scripts/check-vesper-status.sh:*)",
       "Bash(npm pack:*)",
       "Bash(./scripts/ensure-infrastructure.sh:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "mcp__vesper-dev__vesper_status",
+      "mcp__vesper-dev__get_stats",
+      "mcp__vesper-dev__retrieve_memory",
+      "mcp__vesper-dev__store_memory"
     ]
   }
 }
