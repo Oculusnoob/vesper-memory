@@ -129,7 +129,8 @@
 
         <div class="charts-grid">
             <div class="chart-container">
-                <h3>📊 Query Latency Evolution</h3>
+                <h3>📊 Query Latency Evolution vs Baseline</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Dashed lines show baseline (without Vesper)</p>
                 <canvas id="latencyChart"></canvas>
             </div>
             <div class="chart-container">
@@ -161,27 +162,60 @@
         new Chart(document.getElementById('latencyChart'), {
             type: 'line',
             data: {
-                labels: ['v0.3.x', 'v0.4.0'],
+                labels: ['v0.2.0', 'v0.3.0', 'v0.3.2', 'v0.4.0'],
                 datasets: [
                     {
+                        label: 'Baseline P50 (Without Vesper)',
+                        data: [4.5, 4.5, 4.5, 4.5],
+                        borderColor: '#E0E0E0',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0
+                    },
+                    {
+                        label: 'Baseline P95 (Without Vesper)',
+                        data: [7.0, 7.0, 7.0, 7.0],
+                        borderColor: '#BDBDBD',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0
+                    },
+                    {
+                        label: 'Baseline P99 (Without Vesper)',
+                        data: [7.5, 7.5, 7.5, 7.5],
+                        borderColor: '#9E9E9E',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0
+                    },
+                    {
                         label: 'P50 (ms)',
-                        data: [0.2, 0.2],
+                        data: [1.0, 1.4, 0.2, 0.2],
                         borderColor: '#4CAF50',
                         backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        borderWidth: 3,
                         tension: 0.4
                     },
                     {
                         label: 'P95 (ms)',
-                        data: [0.3, 0.4],
+                        data: [3.5, 7.3, 0.3, 0.4],
                         borderColor: '#2196F3',
                         backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                        borderWidth: 3,
                         tension: 0.4
                     },
                     {
                         label: 'P99 (ms)',
-                        data: [0.4, 0.6],
+                        data: [8.4, 16.8, 0.4, 0.6],
                         borderColor: '#FF9800',
                         backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                        borderWidth: 3,
                         tension: 0.4
                     }
                 ]
