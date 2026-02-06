@@ -8,33 +8,37 @@
     <style>
         :root {
             --vesper-bg-dark: #0b0e25;
+            --vesper-bg-card: #141836;
+            --vesper-bg-surface: #1a1f42;
             --vesper-primary: #6365e7;
             --vesper-accent: #8183dd;
             --vesper-text-bright: #a8b4f7;
+            --vesper-text-dim: #5a6080;
+            --vesper-border: #252a50;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, var(--vesper-primary) 0%, var(--vesper-accent) 100%);
-            color: #333;
+            background: var(--vesper-bg-dark);
+            color: var(--vesper-text-bright);
             padding: 20px;
         }
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            background: white;
+            background: var(--vesper-bg-card);
             border-radius: 16px;
             padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border: 1px solid var(--vesper-border);
         }
         h1 {
-            color: var(--vesper-primary);
+            color: #ffffff;
             margin-bottom: 10px;
             font-size: 2.5em;
         }
         .subtitle {
-            color: #666;
+            color: var(--vesper-text-dim);
             margin-bottom: 40px;
             font-size: 1.1em;
         }
@@ -45,25 +49,40 @@
             margin-bottom: 40px;
         }
         .metric-card {
-            background: linear-gradient(135deg, var(--vesper-primary) 0%, var(--vesper-accent) 100%);
+            background: var(--vesper-bg-surface);
+            border: 1px solid var(--vesper-border);
             color: white;
             padding: 24px;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--vesper-primary), var(--vesper-accent));
         }
         .metric-value {
             font-size: 2.5em;
             font-weight: bold;
             margin: 10px 0;
+            background: linear-gradient(135deg, #ffffff, var(--vesper-text-bright));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         .metric-label {
             font-size: 0.9em;
-            opacity: 0.9;
+            color: var(--vesper-text-dim);
         }
         .metric-change {
             font-size: 0.85em;
             margin-top: 8px;
-            opacity: 0.9;
+            color: var(--vesper-accent);
         }
         .charts-grid {
             display: grid;
@@ -72,21 +91,21 @@
             margin-top: 30px;
         }
         .chart-container {
-            background: #f8f9fa;
+            background: var(--vesper-bg-surface);
+            border: 1px solid var(--vesper-border);
             padding: 24px;
             border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .chart-container h3 {
             margin-bottom: 20px;
-            color: var(--vesper-primary);
+            color: var(--vesper-text-bright);
         }
         canvas {
             max-height: 300px;
         }
         .version-badge {
             display: inline-block;
-            background: #4CAF50;
+            background: var(--vesper-primary);
             color: white;
             padding: 6px 12px;
             border-radius: 6px;
@@ -97,16 +116,16 @@
         .footer {
             margin-top: 40px;
             padding-top: 20px;
-            border-top: 2px solid #e0e0e0;
+            border-top: 1px solid var(--vesper-border);
             text-align: center;
-            color: #666;
+            color: var(--vesper-text-dim);
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>
-            🚀 Vesper Performance Dashboard
+            Vesper Performance Dashboard
             <span class="version-badge">v0.4.0</span>
         </h1>
         <p class="subtitle">Real-time performance metrics and benchmark progression</p>
@@ -136,34 +155,53 @@
 
         <div class="charts-grid">
             <div class="chart-container">
-                <h3>📊 Query Latency Evolution vs Baseline</h3>
-                <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Dashed lines show baseline (without Vesper)</p>
+                <h3>Query Latency Evolution vs Baseline</h3>
+                <p style="color: var(--vesper-text-dim); font-size: 0.9em; margin-bottom: 10px;">Dashed lines show baseline (without Vesper)</p>
                 <canvas id="latencyChart"></canvas>
             </div>
             <div class="chart-container">
-                <h3>💰 Token Efficiency Gains</h3>
+                <h3>Token Efficiency Gains</h3>
                 <canvas id="tokenChart"></canvas>
             </div>
             <div class="chart-container">
-                <h3>⚡ Performance Improvements</h3>
+                <h3>Performance Improvements</h3>
                 <canvas id="improvementChart"></canvas>
             </div>
             <div class="chart-container">
-                <h3>🎯 Latency Distribution</h3>
+                <h3>Latency Distribution</h3>
                 <canvas id="distributionChart"></canvas>
             </div>
         </div>
 
         <div class="footer">
             <p><strong>Last Updated:</strong> 2026-02-05 | <strong>Test Environment:</strong> macOS 14.7, Redis 7.0, Qdrant 1.7, SQLite 3.43</p>
-            <p style="margin-top: 10px;">Built with ❤️ by Claude Code + David Fitzsimmons</p>
+            <p style="margin-top: 10px;">Built by Claude Code + David Fitzsimmons</p>
         </div>
     </div>
 
     <script>
-        // Chart.js defaults
+        // Vesper color palette
+        const vesper = {
+            bright:  '#a8b4f7',
+            accent:  '#8183dd',
+            primary: '#6365e7',
+            dim:     '#5a6080',
+            grid:    '#252a50',
+            surface: '#1a1f42',
+        };
+
+        // Chart.js global dark mode defaults
         Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        Chart.defaults.plugins.legend.display = true;
+        Chart.defaults.color = vesper.bright;
+        Chart.defaults.borderColor = vesper.grid;
+        Chart.defaults.plugins.legend.labels.color = vesper.bright;
+
+        // Shared scale options for dark mode
+        const darkScaleDefaults = {
+            grid: { color: vesper.grid },
+            ticks: { color: vesper.accent },
+            title: { color: vesper.bright },
+        };
 
         // 1. Latency Evolution Chart
         new Chart(document.getElementById('latencyChart'), {
@@ -172,57 +210,60 @@
                 labels: ['v0.2.0', 'v0.3.0', 'v0.3.2', 'v0.4.0'],
                 datasets: [
                     {
-                        label: 'Baseline P50 (Without Vesper)',
+                        label: 'Baseline P50',
                         data: [4.5, 4.5, 4.5, 4.5],
-                        borderColor: '#4CAF50',
+                        borderColor: vesper.dim,
                         backgroundColor: 'transparent',
                         borderDash: [5, 5],
-                        borderWidth: 2,
+                        borderWidth: 1,
                         pointRadius: 0,
                         tension: 0
                     },
                     {
-                        label: 'Baseline P95 (Without Vesper)',
+                        label: 'Baseline P95',
                         data: [7.0, 7.0, 7.0, 7.0],
-                        borderColor: '#2196F3',
+                        borderColor: vesper.dim,
                         backgroundColor: 'transparent',
-                        borderDash: [5, 5],
-                        borderWidth: 2,
+                        borderDash: [8, 4],
+                        borderWidth: 1,
                         pointRadius: 0,
                         tension: 0
                     },
                     {
-                        label: 'Baseline P99 (Without Vesper)',
+                        label: 'Baseline P99',
                         data: [7.5, 7.5, 7.5, 7.5],
-                        borderColor: '#FF9800',
+                        borderColor: vesper.dim,
                         backgroundColor: 'transparent',
-                        borderDash: [5, 5],
-                        borderWidth: 2,
+                        borderDash: [2, 2],
+                        borderWidth: 1,
                         pointRadius: 0,
                         tension: 0
                     },
                     {
                         label: 'P50 (ms)',
                         data: [1.0, 1.4, 0.2, 0.2],
-                        borderColor: '#4CAF50',
-                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        borderColor: vesper.bright,
+                        backgroundColor: 'rgba(168, 180, 247, 0.1)',
                         borderWidth: 3,
+                        pointBackgroundColor: vesper.bright,
                         tension: 0.4
                     },
                     {
                         label: 'P95 (ms)',
                         data: [3.5, 7.3, 0.3, 0.4],
-                        borderColor: '#2196F3',
-                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                        borderColor: vesper.accent,
+                        backgroundColor: 'rgba(129, 131, 221, 0.1)',
                         borderWidth: 3,
+                        pointBackgroundColor: vesper.accent,
                         tension: 0.4
                     },
                     {
                         label: 'P99 (ms)',
                         data: [8.4, 16.8, 0.4, 0.6],
-                        borderColor: '#FF9800',
-                        backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                        borderColor: vesper.primary,
+                        backgroundColor: 'rgba(99, 101, 231, 0.1)',
                         borderWidth: 3,
+                        pointBackgroundColor: vesper.primary,
                         tension: 0.4
                     }
                 ]
@@ -230,18 +271,17 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: {
-                    title: {
-                        display: false
-                    }
-                },
+                plugins: { title: { display: false } },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Latency (ms)'
-                        }
+                        title: { display: true, text: 'Latency (ms)', ...darkScaleDefaults.title },
+                        grid: darkScaleDefaults.grid,
+                        ticks: darkScaleDefaults.ticks,
+                    },
+                    x: {
+                        grid: darkScaleDefaults.grid,
+                        ticks: darkScaleDefaults.ticks,
                     }
                 }
             }
@@ -256,31 +296,31 @@
                     label: 'Tokens per Skill',
                     data: [500, 50],
                     backgroundColor: [
-                        'rgba(244, 67, 54, 0.8)',
-                        'rgba(76, 175, 80, 0.8)'
+                        'rgba(99, 101, 231, 0.7)',
+                        'rgba(168, 180, 247, 0.7)'
                     ],
                     borderColor: [
-                        'rgb(244, 67, 54)',
-                        'rgb(76, 175, 80)'
+                        vesper.primary,
+                        vesper.bright
                     ],
-                    borderWidth: 2
+                    borderWidth: 2,
+                    borderRadius: 6,
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
+                plugins: { legend: { display: false } },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Tokens'
-                        }
+                        title: { display: true, text: 'Tokens', ...darkScaleDefaults.title },
+                        grid: darkScaleDefaults.grid,
+                        ticks: darkScaleDefaults.ticks,
+                    },
+                    x: {
+                        grid: darkScaleDefaults.grid,
+                        ticks: darkScaleDefaults.ticks,
                     }
                 }
             }
@@ -294,27 +334,27 @@
                 datasets: [{
                     label: 'Improvement %',
                     data: [95.2, 93.9, 90.7, 100, 100, 90, 49.3],
-                    backgroundColor: 'rgba(99, 101, 231, 0.8)',
-                    borderColor: 'rgb(99, 101, 231)',
-                    borderWidth: 2
+                    backgroundColor: 'rgba(129, 131, 221, 0.7)',
+                    borderColor: vesper.accent,
+                    borderWidth: 2,
+                    borderRadius: 6,
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
                 indexAxis: 'y',
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
+                plugins: { legend: { display: false } },
                 scales: {
                     x: {
                         beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Improvement %'
-                        }
+                        title: { display: true, text: 'Improvement %', ...darkScaleDefaults.title },
+                        grid: darkScaleDefaults.grid,
+                        ticks: darkScaleDefaults.ticks,
+                    },
+                    y: {
+                        grid: darkScaleDefaults.grid,
+                        ticks: darkScaleDefaults.ticks,
                     }
                 }
             }
@@ -329,24 +369,27 @@
                     {
                         label: 'P50',
                         data: [4.5, 0.2],
-                        borderColor: '#4CAF50',
-                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        borderColor: vesper.bright,
+                        backgroundColor: 'rgba(168, 180, 247, 0.15)',
+                        pointBackgroundColor: vesper.bright,
                         fill: true,
                         tension: 0.4
                     },
                     {
                         label: 'P95',
                         data: [6.8, 0.4],
-                        borderColor: '#2196F3',
-                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                        borderColor: vesper.accent,
+                        backgroundColor: 'rgba(129, 131, 221, 0.15)',
+                        pointBackgroundColor: vesper.accent,
                         fill: true,
                         tension: 0.4
                     },
                     {
                         label: 'P99',
                         data: [6.9, 0.6],
-                        borderColor: '#FF9800',
-                        backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                        borderColor: vesper.primary,
+                        backgroundColor: 'rgba(99, 101, 231, 0.15)',
+                        pointBackgroundColor: vesper.primary,
                         fill: true,
                         tension: 0.4
                     }
@@ -358,10 +401,13 @@
                 scales: {
                     y: {
                         beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Latency (ms)'
-                        }
+                        title: { display: true, text: 'Latency (ms)', ...darkScaleDefaults.title },
+                        grid: darkScaleDefaults.grid,
+                        ticks: darkScaleDefaults.ticks,
+                    },
+                    x: {
+                        grid: darkScaleDefaults.grid,
+                        ticks: darkScaleDefaults.ticks,
                     }
                 }
             }
