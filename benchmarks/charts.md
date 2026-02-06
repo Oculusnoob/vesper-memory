@@ -7,7 +7,7 @@ Visual representation of performance metrics across versions.
 ## Query Latency Trends (Lower is Better)
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#6365e7', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#8183dd', 'lineColor':'#6365e7', 'secondaryColor':'#8183dd', 'tertiaryColor':'#a8b4f7'}}}%%
+%%{init: {'theme':'dark', 'themeVariables': { 'xyChart': {'backgroundColor':'transparent', 'titleColor':'#a8b4f7', 'xAxisLabelColor':'#a8b4f7', 'yAxisLabelColor':'#a8b4f7', 'plotColorPalette':'#a8b4f7, #8183dd, #6365e7'}}}}%%
 xychart-beta
     title "Query Latency by Version (ms)"
     x-axis ["v0.2.0", "v0.3.0", "v0.3.2", "v0.4.0"]
@@ -24,7 +24,7 @@ xychart-beta
 ## Token Efficiency (Lower is Better)
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#8183dd', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#6365e7'}}}%%
+%%{init: {'theme':'dark', 'themeVariables': { 'xyChart': {'backgroundColor':'transparent', 'titleColor':'#a8b4f7', 'xAxisLabelColor':'#a8b4f7', 'yAxisLabelColor':'#a8b4f7', 'plotColorPalette':'#8183dd, #6365e7'}}}}%%
 xychart-beta
     title "Token Usage Per Skill (tokens)"
     x-axis ["v0.3.x Full Loading", "v0.4.0 Lazy Loading"]
@@ -39,7 +39,7 @@ xychart-beta
 ## Memory System Performance Gains
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#6365e7', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#8183dd'}}}%%
+%%{init: {'theme':'dark', 'themeVariables': { 'xyChart': {'backgroundColor':'transparent', 'titleColor':'#a8b4f7', 'xAxisLabelColor':'#a8b4f7', 'yAxisLabelColor':'#a8b4f7', 'plotColorPalette':'#6365e7'}}}}%%
 xychart-beta
     title "Performance Improvement: With vs Without Memory (%)"
     x-axis ["Query Latency P50", "Query Latency P95", "Query Latency P99", "Retrieval Accuracy", "Context Retention", "Token Efficiency", "Consistency"]
@@ -58,7 +58,7 @@ xychart-beta
 ## Baseline Comparison: With vs Without Vesper
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#6365e7', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#8183dd', 'lineColor':'#6365e7', 'secondaryColor':'#8183dd'}}}%%
+%%{init: {'theme':'dark', 'themeVariables': { 'xyChart': {'backgroundColor':'transparent', 'titleColor':'#a8b4f7', 'xAxisLabelColor':'#a8b4f7', 'yAxisLabelColor':'#a8b4f7', 'plotColorPalette':'#8183dd, #6365e7'}}}}%%
 xychart-beta
     title "Performance vs Baseline (P95 Latency)"
     x-axis ["v0.2.0", "v0.3.0", "v0.3.2", "v0.4.0"]
@@ -70,7 +70,7 @@ xychart-beta
 **Impact**: Vesper achieves 50-95% latency reduction compared to baseline across all versions. v0.3.2 onwards delivers sub-millisecond P95 latency (94% faster than baseline).
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#8183dd', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#6365e7'}}}%%
+%%{init: {'theme':'dark', 'themeVariables': { 'xyChart': {'backgroundColor':'transparent', 'titleColor':'#a8b4f7', 'xAxisLabelColor':'#a8b4f7', 'yAxisLabelColor':'#a8b4f7', 'plotColorPalette':'#8183dd'}}}}%%
 xychart-beta
     title "All Percentiles vs Baseline"
     x-axis ["Baseline P50", "v0.4.0 P50", "Baseline P95", "v0.4.0 P95", "Baseline P99", "v0.4.0 P99"]
@@ -85,7 +85,7 @@ xychart-beta
 ## Latency Distribution Comparison
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#6365e7', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#8183dd', 'lineColor':'#6365e7', 'secondaryColor':'#8183dd', 'tertiaryColor':'#a8b4f7'}}}%%
+%%{init: {'theme':'dark', 'themeVariables': { 'xyChart': {'backgroundColor':'transparent', 'titleColor':'#a8b4f7', 'xAxisLabelColor':'#a8b4f7', 'yAxisLabelColor':'#a8b4f7', 'plotColorPalette':'#a8b4f7, #8183dd, #6365e7'}}}}%%
 xychart-beta
     title "Latency Evolution Across All Percentiles"
     x-axis ["Baseline", "v0.2.0", "v0.3.0", "v0.3.2", "v0.4.0"]
@@ -113,7 +113,7 @@ xychart-beta
 ## Performance vs Features Trade-off
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#6365e7', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#8183dd', 'quadrant1Fill':'#8183dd', 'quadrant2Fill':'#6365e7', 'quadrant3Fill':'#0b0e25', 'quadrant4Fill':'#a8b4f7'}}}%%
+%%{init: {'theme':'dark', 'themeVariables': { 'quadrant1Fill':'#6365e7', 'quadrant2Fill':'#8183dd', 'quadrant3Fill':'#2a2d4a', 'quadrant4Fill':'#4a4d6a', 'quadrant1TextFill':'#a8b4f7', 'quadrant2TextFill':'#a8b4f7', 'quadrant3TextFill':'#8183dd', 'quadrant4TextFill':'#8183dd', 'quadrantPointFill':'#a8b4f7', 'quadrantPointTextFill':'#a8b4f7', 'quadrantXAxisTextFill':'#a8b4f7', 'quadrantYAxisTextFill':'#a8b4f7', 'quadrantTitleFill':'#a8b4f7'}}}%%
 quadrantChart
     title Performance vs Features Matrix
     x-axis Low Features --> High Features
@@ -160,7 +160,7 @@ quadrantChart
 ### Planned for v0.5.0
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#6365e7', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#8183dd', 'taskBkgColor':'#8183dd', 'taskTextColor':'#a8b4f7', 'taskBorderColor':'#6365e7', 'activeTaskBkgColor':'#6365e7', 'activeTaskBorderColor':'#a8b4f7'}}}%%
+%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor':'#6365e7', 'primaryTextColor':'#a8b4f7', 'primaryBorderColor':'#8183dd', 'taskBkgColor':'#6365e7', 'taskTextColor':'#ffffff', 'taskBorderColor':'#8183dd', 'activeTaskBkgColor':'#8183dd', 'activeTaskBorderColor':'#a8b4f7', 'gridColor':'#4a4d6a', 'todayLineColor':'#a8b4f7', 'sectionBkgColor':'#2a2d4a', 'altSectionBkgColor':'#1a1d3a', 'sectionBkgColor2':'#3a3d5a'}}}%%
 gantt
     title Optimization Roadmap
     dateFormat YYYY-MM-DD
