@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Performance**: <200ms P95 latency, 95%+ retrieval accuracy
 
-**Test Coverage**: 632/632 tests passing (100%)
+**Test Coverage**: 909/909 tests passing (100%)
 
 ---
 
@@ -32,7 +32,7 @@ npm run build:global
 # (Uses vesper-dev instance via local .claude/mcp_config.json)
 
 # Run tests
-npm test                    # 632 tests should pass
+npm test                    # 909 tests should pass
 
 # Run MCP server (development mode)
 npm run dev
@@ -79,7 +79,7 @@ vesper migrate  # Automatic migration from old locations
 ```
 ┌─────────────────────────────────────────┐
 │  MCP Server (Node.js/TypeScript)        │
-│  - Four MCP tools                       │
+│  - 13 MCP tools (namespace-aware)       │
 │  - Smart query routing                  │
 │  - Local stdio transport                │
 └──────────────┬──────────────────────────┘
@@ -146,12 +146,30 @@ src/
 
 ## MCP Tools
 
-### Four Tools Available
+### 13 Tools Available
 
-1. **store_memory**: Store memories with automatic embedding generation
-2. **retrieve_memory**: Query with smart routing and semantic search
+All tools accept an optional `namespace` parameter (default: `"default"`) for multi-agent isolation.
+
+**Core Memory Tools**:
+1. **store_memory**: Store memories with automatic embedding generation (supports `agent_id`, `agent_role`, `task_id`)
+2. **retrieve_memory**: Query with smart routing and semantic search (supports `agent_id`, `task_id`, `exclude_agent` filters)
 3. **list_recent**: Get recent conversations from working memory
 4. **get_stats**: System metrics and health status
+
+**Multi-Agent Tools** (v0.5.0):
+5. **share_context**: Copy memories between namespaces with handoff tracking
+6. **store_decision**: Store decisions with reduced temporal decay and conflict detection
+7. **list_namespaces**: Discover all namespaces with memory counts
+8. **namespace_stats**: Per-namespace breakdown of memories, entities, skills, agents
+
+**System Control Tools**:
+9. **vesper_enable**: Enable memory system
+10. **vesper_disable**: Disable memory system (pass-through mode)
+11. **vesper_status**: Check system state
+
+**Skill Tools**:
+12. **load_skill**: Load full skill description on-demand
+13. **record_skill_outcome**: Track skill execution success/failure
 
 ### Query Routing
 
@@ -191,7 +209,7 @@ npm run reinstall
 
 ```bash
 # Run all tests
-npm test                    # 632 tests
+npm test                    # 909 tests
 
 # Run specific test suites
 npm test tests/router.test.ts
@@ -268,22 +286,31 @@ LOG_LEVEL=info
 
 ## Test Architecture
 
-**Overall**: 632/632 tests passing (100%)
+**Overall**: 909/909 tests passing (100%)
 
 ### Test Coverage
 
 | Category | Tests | File |
 |----------|-------|------|
 | Query Classification | 45 | `tests/router.test.ts` |
+| Namespace Isolation | 32 | `tests/namespace-isolation.test.ts` |
 | Semantic Memory | 30 | `tests/semantic-memory.test.ts` |
+| Share Context | 25 | `tests/share-context.test.ts` |
 | Skill Library | 26 | `tests/skill-library.test.ts` |
+| Agent Attribution | 20 | `tests/agent-attribution.test.ts` |
+| Store Decision | 20 | `tests/store-decision.test.ts` |
 | Conflict Detection | 19 | `tests/conflict-detector.test.ts` |
 | Consolidation | 21 | `tests/consolidation.test.ts` |
+| Namespace Tools | 15 | `tests/namespace-tools.test.ts` |
 | Working Memory | 14 | `tests/working-memory.test.ts` |
 
 **Key Features Tested**:
 - Query classification accuracy
 - Memory storage and retrieval
+- Namespace isolation across all layers
+- Agent attribution and filtering
+- Context sharing between namespaces
+- Decision storage with reduced decay
 - Skill extraction and tracking
 - Conflict detection (never auto-resolves)
 - Working memory caching

@@ -8,30 +8,35 @@ Simple, local memory system for Claude Code. No authentication, no complexity - 
 
 [![npm version](https://img.shields.io/npm/v/vesper-memory.svg)](https://www.npmjs.com/package/vesper-memory)
 [![npm downloads](https://img.shields.io/npm/dm/vesper-memory.svg)](https://www.npmjs.com/package/vesper-memory)
-[![Test Coverage](https://img.shields.io/badge/tests-789%2F789-brightgreen)](.)
+[![Test Coverage](https://img.shields.io/badge/tests-909%2F909-brightgreen)](.)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](.)
 [![License](https://img.shields.io/badge/license-MIT-blue)](.)
 
 ---
 
-## ✨ What's New in v0.4.0
+## ✨ What's New in v0.5.0
 
-**Lazy Loading System** (90% token reduction)
-- Summary-only skill loading: 50 tokens vs 500 tokens per skill
-- On-demand full description loading with `load_skill` tool
-- Massive context window savings for agent workflows
+**Multi-Agent Namespace Isolation**
+- All memory operations support `namespace` parameter for multi-agent workflows
+- Multiple specialist agents can share Vesper while maintaining isolation
+- Fully backward compatible - existing single-agent usage unchanged
 
-**Relational Skill Library** (Word2Vec-inspired)
-- Geometric embeddings for skill relationships
-- Analogical reasoning: "skill X is to Y as A is to ?"
-- Smart skill similarity and recommendation system
+**Agent Attribution**
+- Track which agent stored each memory with `agent_id`, `agent_role`, `task_id`
+- Filter retrieval by agent or task, or exclude specific agents
 
-**Security Hardening**
-- 7 buffer validation points across the codebase
-- UPSERT race condition fixes in skill library
-- Comprehensive input sanitization
+**Decision Memory Type**
+- New `memory_type: "decision"` with reduced temporal decay (4x slower)
+- Supersedes mechanism for evolving decisions
+- Automatic conflict detection against existing decisions
 
-**Performance**: P50=0.2ms, P95=0.4ms, P99=0.6ms (94% faster than baseline)
+**4 New MCP Tools** (13 total)
+- `share_context`: Copy memories between namespaces with handoff tracking
+- `store_decision`: Store decisions with conflict detection
+- `list_namespaces`: Discover all namespaces with counts
+- `namespace_stats`: Per-namespace breakdown of memories, entities, agents
+
+**909 tests passing** (up from 632 in v0.4.0)
 
 ---
 
@@ -380,7 +385,7 @@ Entity    Prefs KG  HippoRAG  TimeRange Skills
 
 ## 🔧 MCP Tools
 
-Vesper provides 8 MCP tools for memory management:
+Vesper provides 13 MCP tools for memory management. All tools accept an optional `namespace` parameter (default: `"default"`) for multi-agent isolation:
 
 ### Core Memory Tools
 
@@ -391,6 +396,7 @@ Store a memory with automatic embedding generation.
 {
   "content": "User prefers Python over JavaScript for backend development",
   "memory_type": "preference",
+  "namespace": "architect-agent",
   "metadata": {
     "confidence": 0.95,
     "source": "conversation",
@@ -399,10 +405,17 @@ Store a memory with automatic embedding generation.
 }
 ```
 
+**v0.5.0 Fields**:
+- `namespace` (optional): Isolate memories by agent/context (default: `"default"`)
+- `agent_id` (optional): Track which agent stored this memory
+- `agent_role` (optional): Role of the storing agent (e.g., `"code-reviewer"`)
+- `task_id` (optional): Associate memory with a specific task
+
 **Features**:
 - Automatic BGE-large embedding generation
 - Dual storage (SQLite metadata + Qdrant vectors)
 - Working memory cache (7-day TTL)
+- Namespace-scoped storage for multi-agent isolation
 
 ### `retrieve_memory`
 Query with smart routing and semantic search.
@@ -410,9 +423,16 @@ Query with smart routing and semantic search.
 ```json
 {
   "query": "What programming language does the user prefer for backend?",
+  "namespace": "architect-agent",
   "max_results": 5
 }
 ```
+
+**v0.5.0 Filters**:
+- `namespace` (optional): Search within a specific namespace (default: `"default"`)
+- `agent_id` (optional): Filter to memories from a specific agent
+- `task_id` (optional): Filter to memories from a specific task
+- `exclude_agent` (optional): Exclude memories from a specific agent
 
 **Routing Strategies**:
 - `semantic`: BGE-large semantic search (default)
@@ -518,6 +538,88 @@ Track skill execution success/failure for continuous learning.
   "skill_id": "skill-12345",
   "outcome": "success",
   "satisfaction": 0.95
+}
+```
+
+### Multi-Agent Tools (v0.5.0)
+
+### `share_context`
+Copy memories between namespaces with handoff tracking. Useful for passing context between specialist agents.
+
+```json
+{
+  "source_namespace": "researcher",
+  "target_namespace": "implementer",
+  "task_id": "task-456",
+  "summary": "Research findings on auth patterns",
+  "max_memories": 10
+}
+```
+
+**Features**:
+- Copies relevant memories (filtered by task_id or semantic search)
+- Packages related entities and skills
+- Stores a handoff event in the target namespace for traceability
+
+### `store_decision`
+Store architectural or project decisions with reduced temporal decay.
+
+```json
+{
+  "content": "Use PostgreSQL over MongoDB for transaction guarantees",
+  "namespace": "architect-agent",
+  "rationale": "Need ACID compliance for financial data",
+  "supersedes": "decision-old-123",
+  "metadata": {
+    "tags": ["database", "architecture"]
+  }
+}
+```
+
+**Features**:
+- Stored as `memory_type: "decision"` with `decay_factor: 0.25` (decisions persist 4x longer)
+- Supersedes mechanism: new decisions can mark old ones as superseded
+- Automatic conflict detection against existing decisions in the same namespace
+
+### `list_namespaces`
+Discover all namespaces with memory counts.
+
+```json
+{}
+```
+
+**Response**:
+```json
+{
+  "namespaces": [
+    { "namespace": "default", "memory_count": 142 },
+    { "namespace": "architect-agent", "memory_count": 38 },
+    { "namespace": "code-reviewer", "memory_count": 25 }
+  ],
+  "total_namespaces": 3
+}
+```
+
+### `namespace_stats`
+Per-namespace breakdown of memories, entities, skills, and agents.
+
+```json
+{
+  "namespace": "architect-agent"
+}
+```
+
+**Response**:
+```json
+{
+  "namespace": "architect-agent",
+  "memories": 38,
+  "decisions": 12,
+  "entities": 85,
+  "relationships": 134,
+  "skills": 5,
+  "agents": ["architect-v1", "architect-v2"],
+  "last_activity": "2026-02-06T10:30:00Z"
 }
 ```
 
