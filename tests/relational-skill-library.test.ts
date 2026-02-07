@@ -361,7 +361,8 @@ describe('Phase 2: Skill Embedding Generation', () => {
         avg_user_satisfaction REAL DEFAULT 0.5,
         is_archived INTEGER DEFAULT 0,
         last_used TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE skill_relationships (
@@ -551,7 +552,8 @@ describe('Phase 3: Geometric Search', () => {
         avg_user_satisfaction REAL DEFAULT 0.5,
         is_archived INTEGER DEFAULT 0,
         last_used TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE skill_relationships (
@@ -769,7 +771,8 @@ describe('Phase 4: Relational Vectors', () => {
         avg_user_satisfaction REAL DEFAULT 0.5,
         is_archived INTEGER DEFAULT 0,
         last_used TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE skill_relationships (
@@ -1089,7 +1092,8 @@ describe('Phase 5: Integration', () => {
         avg_user_satisfaction REAL DEFAULT 0.5,
         is_archived INTEGER DEFAULT 0,
         last_used TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE skill_relationships (

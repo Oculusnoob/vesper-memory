@@ -134,7 +134,7 @@ export class LazyLoadingSkillLibrary {
    * @param category - Optional category filter
    * @returns Array of SkillSummary objects
    */
-  getSummaries(limit: number = 20, category?: string): SkillSummary[] {
+  getSummaries(limit: number = 20, category?: string, namespace: string = 'default'): SkillSummary[] {
     let query = `
       SELECT
         id,
@@ -147,10 +147,10 @@ export class LazyLoadingSkillLibrary {
         avg_user_satisfaction,
         last_used
       FROM skills
-      WHERE is_archived = 0
+      WHERE is_archived = 0 AND namespace = ?
     `;
 
-    const params: any[] = [];
+    const params: any[] = [namespace];
 
     if (category) {
       query += ' AND category = ?';

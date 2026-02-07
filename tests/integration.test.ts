@@ -95,7 +95,8 @@ describe('Semantic Memory Layer', () => {
         confidence REAL DEFAULT 1.0,
         created_at TEXT NOT NULL,
         last_accessed TEXT NOT NULL,
-        access_count INTEGER DEFAULT 1
+        access_count INTEGER DEFAULT 1,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE relationships (
@@ -106,7 +107,8 @@ describe('Semantic Memory Layer', () => {
         strength REAL DEFAULT 0.8,
         evidence TEXT,
         created_at TEXT NOT NULL,
-        last_reinforced TEXT NOT NULL
+        last_reinforced TEXT NOT NULL,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE facts (
@@ -117,7 +119,8 @@ describe('Semantic Memory Layer', () => {
         confidence REAL DEFAULT 1.0,
         valid_from TEXT,
         valid_until TEXT,
-        source_conversation TEXT
+        source_conversation TEXT,
+        namespace TEXT DEFAULT 'default'
       );
     `);
 
@@ -228,7 +231,8 @@ describe('Conflict Detection', () => {
         name TEXT,
         type TEXT,
         created_at TEXT,
-        description TEXT
+        description TEXT,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE facts (
@@ -238,7 +242,8 @@ describe('Conflict Detection', () => {
         value TEXT,
         confidence REAL,
         valid_from TEXT,
-        valid_until TEXT
+        valid_until TEXT,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE conflicts (
@@ -248,7 +253,8 @@ describe('Conflict Detection', () => {
         conflict_type TEXT,
         description TEXT,
         severity TEXT,
-        resolution_status TEXT
+        resolution_status TEXT,
+        namespace TEXT DEFAULT 'default'
       );
     `);
 

@@ -16,6 +16,34 @@ import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 
 // ============================================================================
+// Reusable Schemas
+// ============================================================================
+
+/**
+ * Namespace schema for multi-agent isolation
+ *
+ * Alphanumeric with hyphens/underscores, defaults to "default".
+ * Used across all tools to scope memory operations.
+ */
+export const NamespaceSchema = z.string()
+  .regex(/^[a-zA-Z][a-zA-Z0-9_-]*$/, "Namespace must start with a letter and contain only alphanumeric characters, underscores, or hyphens")
+  .min(1, "Namespace cannot be empty")
+  .max(100, "Namespace cannot exceed 100 characters")
+  .default("default");
+
+/**
+ * Memory type enum including decision type for v0.5.0
+ */
+export const MemoryTypeEnum = z.enum(["episodic", "semantic", "procedural", "decision"], {
+  message: "Invalid memory type. Must be episodic, semantic, procedural, or decision"
+});
+
+/**
+ * Memory type enum for filtering (retrieve/list operations)
+ */
+export const MemoryTypeFilterEnum = z.enum(["episodic", "semantic", "procedural", "decision"]);
+
+// ============================================================================
 // MCP Tool Input Schemas
 // ============================================================================
 
@@ -24,22 +52,28 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
  *
  * Enforces:
  * - Content between 1 and 100,000 characters (100KB limit)
- * - Memory type must be one of: episodic, semantic, procedural
+ * - Memory type must be one of: episodic, semantic, procedural, decision
  * - Metadata object optional, max 50 keys
+ * - Namespace for multi-agent isolation
+ * - Agent attribution fields (agent_id, agent_role, task_id)
  */
 export const StoreMemoryInputSchema = z.object({
   content: z.string()
     .min(1, "Content cannot be empty")
     .max(100000, "Content exceeds 100KB limit"),
 
-  memory_type: z.enum(["episodic", "semantic", "procedural"], {
-    message: "Invalid memory type. Must be episodic, semantic, or procedural"
-  }),
+  memory_type: MemoryTypeEnum,
 
   metadata: z.record(z.string(), z.unknown())
     .optional()
     .refine((val) => !val || Object.keys(val).length <= 50, "Metadata cannot exceed 50 keys")
     .refine((val) => !val || JSON.stringify(val).length <= 10000, "Metadata size exceeds 10KB limit"),
+
+  namespace: NamespaceSchema.optional().default("default"),
+
+  agent_id: z.string().max(255).optional(),
+  agent_role: z.string().max(255).optional(),
+  task_id: z.string().max(255).optional(),
 });
 
 export type StoreMemoryInput = z.infer<typeof StoreMemoryInputSchema>;
@@ -51,13 +85,15 @@ export type StoreMemoryInput = z.infer<typeof StoreMemoryInputSchema>;
  * - Query between 1 and 10,000 characters (10KB limit)
  * - Memory types array max 10 items
  * - Max results between 1 and 100
+ * - Namespace for multi-agent isolation
+ * - Agent/task filtering
  */
 export const RetrieveMemoryInputSchema = z.object({
   query: z.string()
     .min(1, "Query cannot be empty")
     .max(10000, "Query exceeds 10KB limit"),
 
-  memory_types: z.array(z.enum(["episodic", "semantic", "procedural"]))
+  memory_types: z.array(MemoryTypeFilterEnum)
     .max(10, "Cannot filter by more than 10 memory types")
     .optional(),
 
@@ -70,6 +106,12 @@ export const RetrieveMemoryInputSchema = z.object({
 
   routing_strategy: z.enum(["fast_path", "semantic", "full_text", "graph"])
     .optional(),
+
+  namespace: NamespaceSchema.optional().default("default"),
+
+  agent_id: z.string().max(255).optional(),
+  task_id: z.string().max(255).optional(),
+  exclude_agent: z.string().max(255).optional(),
 });
 
 export type RetrieveMemoryInput = z.infer<typeof RetrieveMemoryInputSchema>;
@@ -85,8 +127,9 @@ export const ListRecentInputSchema = z.object({
     .optional()
     .default(5),
 
-  memory_type: z.enum(["episodic", "semantic", "procedural"])
-    .optional(),
+  memory_type: MemoryTypeFilterEnum.optional(),
+
+  namespace: NamespaceSchema.optional().default("default"),
 });
 
 export type ListRecentInput = z.infer<typeof ListRecentInputSchema>;
@@ -98,6 +141,8 @@ export const GetStatsInputSchema = z.object({
   detailed: z.boolean()
     .optional()
     .default(false),
+
+  namespace: NamespaceSchema.optional().default("default"),
 });
 
 export type GetStatsInput = z.infer<typeof GetStatsInputSchema>;
@@ -125,6 +170,8 @@ export const RecordSkillOutcomeInputSchema = z.object({
     .min(0, "satisfaction must be at least 0")
     .max(1, "satisfaction cannot exceed 1")
     .optional(),
+
+  namespace: NamespaceSchema.optional().default("default"),
 }).refine(
   (data) => {
     // satisfaction is required for success outcome
@@ -156,9 +203,87 @@ export const LoadSkillInputSchema = z.object({
     .min(1, "skill_id cannot be empty")
     .max(255, "skill_id cannot exceed 255 characters")
     .regex(/^skill_[a-z0-9_]+$/i, "Invalid skill_id format (must be skill_*)"),
+
+  namespace: NamespaceSchema.optional().default("default"),
 });
 
 export type LoadSkillInput = z.infer<typeof LoadSkillInputSchema>;
+
+// ============================================================================
+// New Tool Schemas for v0.5.0
+// ============================================================================
+
+/**
+ * Schema for share_context tool input
+ *
+ * Shares context (memories, skills, entities) from one namespace to another.
+ * Used for agent handoffs and context sharing in multi-agent workflows.
+ */
+export const ShareContextInputSchema = z.object({
+  source_namespace: NamespaceSchema,
+  target_namespace: NamespaceSchema,
+
+  task_id: z.string().max(255).optional(),
+
+  query: z.string()
+    .min(1, "Query cannot be empty")
+    .max(10000, "Query exceeds 10KB limit")
+    .optional(),
+
+  max_items: z.number()
+    .int()
+    .min(1)
+    .max(50)
+    .optional()
+    .default(10),
+
+  include_skills: z.boolean().optional().default(false),
+  include_entities: z.boolean().optional().default(true),
+});
+
+export type ShareContextInput = z.infer<typeof ShareContextInputSchema>;
+
+/**
+ * Schema for store_decision tool input
+ *
+ * Stores a decision with reduced decay factor and automatic conflict detection.
+ * Decisions are stored as memory_type='decision' with decay_factor: 0.25.
+ */
+export const StoreDecisionInputSchema = z.object({
+  content: z.string()
+    .min(1, "Content cannot be empty")
+    .max(100000, "Content exceeds 100KB limit"),
+
+  namespace: NamespaceSchema.optional().default("default"),
+
+  agent_id: z.string().max(255).optional(),
+  agent_role: z.string().max(255).optional(),
+  task_id: z.string().max(255).optional(),
+
+  supersedes: z.string().max(255).optional(),
+
+  metadata: z.record(z.string(), z.unknown())
+    .optional()
+    .refine((val) => !val || Object.keys(val).length <= 50, "Metadata cannot exceed 50 keys"),
+});
+
+export type StoreDecisionInput = z.infer<typeof StoreDecisionInputSchema>;
+
+/**
+ * Schema for list_namespaces tool input
+ */
+export const ListNamespacesInputSchema = z.object({});
+
+export type ListNamespacesInput = z.infer<typeof ListNamespacesInputSchema>;
+
+/**
+ * Schema for namespace_stats tool input
+ */
+export const NamespaceStatsInputSchema = z.object({
+  namespace: NamespaceSchema,
+});
+
+export type NamespaceStatsInput = z.infer<typeof NamespaceStatsInputSchema>;
 
 // ============================================================================
 // Internal Data Type Schemas

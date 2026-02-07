@@ -2,6 +2,7 @@
  * Semantic Memory Layer - v3.0 Implementation
  *
  * SQLite knowledge graph with HippoRAG Personalized PageRank.
+ * v0.5.0: Added namespace parameter for multi-agent isolation.
  */
 
 import Database from 'better-sqlite3';
@@ -54,14 +55,14 @@ export class SemanticMemoryLayer {
     this.db = db;
   }
 
-  upsertEntity(entity: Partial<Entity> & { name: string; type: string }): Entity {
+  upsertEntity(entity: Partial<Entity> & { name: string; type: string }, namespace: string = 'default'): Entity {
     if (!entity.name || entity.name.trim() === '') {
       throw new Error('Entity name cannot be empty');
     }
 
     const existing = this.db.prepare(
-      'SELECT * FROM entities WHERE name = ? AND type = ?'
-    ).get(entity.name, entity.type) as any;
+      'SELECT * FROM entities WHERE name = ? AND type = ? AND namespace = ?'
+    ).get(entity.name, entity.type, namespace) as any;
 
     if (existing) {
       this.db.prepare(
@@ -74,9 +75,9 @@ export class SemanticMemoryLayer {
     const now = new Date().toISOString();
 
     this.db.prepare(`
-      INSERT INTO entities (id, name, type, description, confidence, created_at, last_accessed, access_count)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, entity.name, entity.type, entity.description || null, entity.confidence || 1.0, now, now, 1);
+      INSERT INTO entities (id, name, type, description, confidence, created_at, last_accessed, access_count, namespace)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, entity.name, entity.type, entity.description || null, entity.confidence || 1.0, now, now, 1, namespace);
 
     return {
       id,
@@ -87,10 +88,10 @@ export class SemanticMemoryLayer {
     };
   }
 
-  getEntity(name: string): any | null {
+  getEntity(name: string, namespace: string = 'default'): any | null {
     const result = this.db.prepare(
-      'SELECT * FROM entities WHERE name = ? ORDER BY confidence DESC LIMIT 1'
-    ).get(name);
+      'SELECT * FROM entities WHERE name = ? AND namespace = ? ORDER BY confidence DESC LIMIT 1'
+    ).get(name, namespace);
 
     if (result) {
       this.db.prepare(
@@ -101,10 +102,10 @@ export class SemanticMemoryLayer {
     return result || null;
   }
 
-  upsertRelationship(rel: { sourceId: string; targetId: string; relationType: string; strength?: number }): void {
+  upsertRelationship(rel: { sourceId: string; targetId: string; relationType: string; strength?: number }, namespace: string = 'default'): void {
     const existing = this.db.prepare(
-      'SELECT * FROM relationships WHERE source_id = ? AND target_id = ? AND relation_type = ?'
-    ).get(rel.sourceId, rel.targetId, rel.relationType) as any;
+      'SELECT * FROM relationships WHERE source_id = ? AND target_id = ? AND relation_type = ? AND namespace = ?'
+    ).get(rel.sourceId, rel.targetId, rel.relationType, namespace) as any;
 
     const now = new Date().toISOString();
 
@@ -119,12 +120,12 @@ export class SemanticMemoryLayer {
     const id = 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
     this.db.prepare(`
-      INSERT INTO relationships (id, source_id, target_id, relation_type, strength, evidence, created_at, last_reinforced)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, rel.sourceId, rel.targetId, rel.relationType, rel.strength || 0.8, '[]', now, now);
+      INSERT INTO relationships (id, source_id, target_id, relation_type, strength, evidence, created_at, last_reinforced, namespace)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, rel.sourceId, rel.targetId, rel.relationType, rel.strength || 0.8, '[]', now, now, namespace);
   }
 
-  personalizedPageRank(entityId: string, depth: number = 3): any[] {
+  personalizedPageRank(entityId: string, depth: number = 3, namespace: string = 'default'): any[] {
     const visited = new Set<string>();
     const results: any[] = [];
     let currentLayer = [{ entityId, score: 1.0 }];
@@ -136,12 +137,12 @@ export class SemanticMemoryLayer {
         if (visited.has(node.entityId)) continue;
         visited.add(node.entityId);
 
-        const entity = this.db.prepare('SELECT * FROM entities WHERE id = ?').get(node.entityId);
+        const entity = this.db.prepare('SELECT * FROM entities WHERE id = ? AND namespace = ?').get(node.entityId, namespace);
         if (entity) results.push({ ...entity, relevanceScore: node.score });
 
         const rels = this.db.prepare(
-          'SELECT * FROM relationships WHERE source_id = ? OR target_id = ?'
-        ).all(node.entityId, node.entityId) as any[];
+          'SELECT * FROM relationships WHERE (source_id = ? OR target_id = ?) AND namespace = ?'
+        ).all(node.entityId, node.entityId, namespace) as any[];
 
         for (const rel of rels) {
           const nextId = rel.source_id === node.entityId ? rel.target_id : rel.source_id;
@@ -159,28 +160,15 @@ export class SemanticMemoryLayer {
     return results.sort((a, b) => b.relevanceScore - a.relevanceScore);
   }
 
-  /**
-   * Enhanced Personalized PageRank with fact retrieval for multi-hop reasoning.
-   *
-   * Returns both entities AND their associated facts along the traversal path,
-   * enabling multi-hop query answering (e.g., "What protocol does Vesper follow?"
-   * can chain Vesper -> MCP -> "Model Context Protocol").
-   *
-   * @param entityId - Starting entity ID for traversal
-   * @param depth - Maximum hops to traverse (default: 3 for multi-hop queries)
-   * @returns PageRankWithFactsResult containing entities, facts, paths, and chains
-   */
-  personalizedPageRankWithFacts(entityId: string, depth: number = 3): PageRankWithFactsResult {
+  personalizedPageRankWithFacts(entityId: string, depth: number = 3, namespace: string = 'default'): PageRankWithFactsResult {
     const visited = new Set<string>();
     const entities: Array<Entity & { relevanceScore: number }> = [];
     const allFacts: Fact[] = [];
     const paths: TraversalPath[] = [];
     const chains: FactChain[] = [];
 
-    // Track paths for explainability: entityId -> { path: string[], hops: number }
     const pathTracker = new Map<string, { path: string[]; hops: number; relationType: string }>();
 
-    // BFS with score propagation
     let currentLayer = [{
       entityId,
       score: 1.0,
@@ -189,8 +177,7 @@ export class SemanticMemoryLayer {
       lastRelationType: 'start'
     }];
 
-    // Check if starting entity exists
-    const startEntity = this.db.prepare('SELECT * FROM entities WHERE id = ?').get(entityId) as any;
+    const startEntity = this.db.prepare('SELECT * FROM entities WHERE id = ? AND namespace = ?').get(entityId, namespace) as any;
     if (!startEntity) {
       return { entities: [], facts: [], paths: [], chains: [] };
     }
@@ -208,22 +195,19 @@ export class SemanticMemoryLayer {
         if (visited.has(node.entityId)) continue;
         visited.add(node.entityId);
 
-        // Get entity
-        const entity = this.db.prepare('SELECT * FROM entities WHERE id = ?').get(node.entityId) as any;
+        const entity = this.db.prepare('SELECT * FROM entities WHERE id = ? AND namespace = ?').get(node.entityId, namespace) as any;
         if (entity) {
           entities.push({ ...entity, relevanceScore: node.score });
 
-          // Get facts for this entity (valid facts only)
           const entityFacts = this.db.prepare(`
             SELECT * FROM facts
-            WHERE entity_id = ?
+            WHERE entity_id = ? AND namespace = ?
             AND (valid_until IS NULL OR valid_until > datetime('now'))
             ORDER BY confidence DESC
-          `).all(node.entityId) as Fact[];
+          `).all(node.entityId, namespace) as Fact[];
 
           allFacts.push(...entityFacts);
 
-          // Track path if not the starting node
           if (node.depth > 0) {
             pathTracker.set(node.entityId, {
               path: node.path,
@@ -239,13 +223,12 @@ export class SemanticMemoryLayer {
               relationType: node.lastRelationType
             });
 
-            // Build chain info for inference
             if (node.path.length > 2) {
               const intermediaryIds = node.path.slice(1, -1);
               const intermediaryNames: string[] = [];
 
               for (const interId of intermediaryIds) {
-                const interEntity = this.db.prepare('SELECT name FROM entities WHERE id = ?').get(interId) as any;
+                const interEntity = this.db.prepare('SELECT name FROM entities WHERE id = ? AND namespace = ?').get(interId, namespace) as any;
                 if (interEntity) {
                   intermediaryNames.push(interEntity.name);
                 }
@@ -261,17 +244,15 @@ export class SemanticMemoryLayer {
           }
         }
 
-        // Continue only if we have more depth to traverse
         if (d < depth) {
           const rels = this.db.prepare(
-            'SELECT * FROM relationships WHERE source_id = ? OR target_id = ?'
-          ).all(node.entityId, node.entityId) as any[];
+            'SELECT * FROM relationships WHERE (source_id = ? OR target_id = ?) AND namespace = ?'
+          ).all(node.entityId, node.entityId, namespace) as any[];
 
           for (const rel of rels) {
             const nextId = rel.source_id === node.entityId ? rel.target_id : rel.source_id;
             const score = node.score * rel.strength * 0.7;
 
-            // Lower threshold for multi-hop to ensure we reach deeper nodes
             if (!visited.has(nextId) && score > 0.05) {
               nextLayer.push({
                 entityId: nextId,
@@ -288,13 +269,9 @@ export class SemanticMemoryLayer {
       currentLayer = nextLayer;
     }
 
-    // Sort entities by relevance score
     entities.sort((a, b) => b.relevanceScore - a.relevanceScore);
-
-    // Sort facts by confidence
     allFacts.sort((a, b) => b.confidence - a.confidence);
 
-    // Deduplicate facts (same fact might be reached via different paths)
     const uniqueFacts = allFacts.filter((fact, index, self) =>
       index === self.findIndex(f => f.id === fact.id)
     );
@@ -307,15 +284,14 @@ export class SemanticMemoryLayer {
     };
   }
 
-  applyTemporalDecay(): number {
-    const relationships = this.db.prepare('SELECT * FROM relationships').all() as any[];
+  applyTemporalDecay(namespace: string = 'default'): number {
+    const relationships = this.db.prepare('SELECT * FROM relationships WHERE namespace = ?').all(namespace) as any[];
     let updated = 0;
 
     for (const rel of relationships) {
       const daysSince = (Date.now() - new Date(rel.last_reinforced).getTime()) / (1000 * 60 * 60 * 24);
       const newStrength = rel.strength * Math.exp(-daysSince / 30);
 
-      // Just update strength, pruning happens later in consolidation
       this.db.prepare('UPDATE relationships SET strength = ? WHERE id = ?').run(newStrength, rel.id);
       updated++;
     }
@@ -323,18 +299,18 @@ export class SemanticMemoryLayer {
     return updated;
   }
 
-  getPreferences(domain?: string): any[] {
+  getPreferences(domain?: string, namespace: string = 'default'): any[] {
     if (domain) {
       return this.db.prepare(
-        'SELECT * FROM entities WHERE type = ? AND (name LIKE ? OR description LIKE ?)'
-      ).all('preference', `%${domain}%`, `%${domain}%`) as any[];
+        'SELECT * FROM entities WHERE type = ? AND namespace = ? AND (name LIKE ? OR description LIKE ?)'
+      ).all('preference', namespace, `%${domain}%`, `%${domain}%`) as any[];
     }
-    return this.db.prepare('SELECT * FROM entities WHERE type = ?').all('preference') as any[];
+    return this.db.prepare('SELECT * FROM entities WHERE type = ? AND namespace = ?').all('preference', namespace) as any[];
   }
 
-  getByTimeRange(start?: Date, end?: Date): any[] {
-    let query = 'SELECT * FROM entities WHERE 1=1';
-    const params: any[] = [];
+  getByTimeRange(start?: Date, end?: Date, namespace: string = 'default'): any[] {
+    let query = 'SELECT * FROM entities WHERE namespace = ?';
+    const params: any[] = [namespace];
 
     if (start) {
       query += ' AND created_at >= ?';

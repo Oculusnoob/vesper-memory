@@ -40,8 +40,9 @@ export class ConsolidationPipeline {
 
   /**
    * Run full consolidation cycle
+   * If namespace is omitted, consolidates all namespaces.
    */
-  async consolidate(): Promise<ConsolidationStats> {
+  async consolidate(namespace?: string): Promise<ConsolidationStats> {
     const startTime = Date.now();
     console.error('[CONSOLIDATION] Starting consolidation cycle...');
 
@@ -56,36 +57,42 @@ export class ConsolidationPipeline {
     };
 
     try {
-      // Step 1: Extract from working memory
-      const recentMemories = await this.workingMemory.getRecent(100);
-      stats.memoriesProcessed = recentMemories.length;
+      // Determine namespaces to consolidate
+      const namespacesToProcess = namespace
+        ? [namespace]
+        : this.getDistinctNamespaces();
 
-      for (const memory of recentMemories) {
-        // Extract entities and relationships
-        const extracted = this.extractKnowledge(memory);
+      for (const ns of namespacesToProcess) {
+        // Step 1: Extract from working memory
+        const recentMemories = await this.workingMemory.getRecent(100, ns);
+        stats.memoriesProcessed += recentMemories.length;
 
-        for (const entity of extracted.entities) {
-          this.semanticMemory.upsertEntity(entity);
-          stats.entitiesExtracted++;
+        for (const memory of recentMemories) {
+          const extracted = this.extractKnowledge(memory);
+
+          for (const entity of extracted.entities) {
+            this.semanticMemory.upsertEntity(entity, ns);
+            stats.entitiesExtracted++;
+          }
+
+          for (const rel of extracted.relationships) {
+            this.semanticMemory.upsertRelationship(rel, ns);
+            stats.relationshipsCreated++;
+          }
         }
 
-        for (const rel of extracted.relationships) {
-          this.semanticMemory.upsertRelationship(rel);
-          stats.relationshipsCreated++;
-        }
+        // Step 2: Apply temporal decay
+        this.semanticMemory.applyTemporalDecay(ns);
+
+        // Step 3: Detect conflicts
+        stats.conflictsDetected += this.detectConflicts(ns);
+
+        // Step 4: Prune low-value memories
+        stats.memoriesPruned += this.pruneMemories(ns);
+
+        // Step 5: Extract skills (simplified)
+        stats.skillsExtracted += this.extractSkills(recentMemories, ns);
       }
-
-      // Step 2: Apply temporal decay
-      this.semanticMemory.applyTemporalDecay();
-
-      // Step 3: Detect conflicts
-      stats.conflictsDetected = this.detectConflicts();
-
-      // Step 4: Prune low-value memories
-      stats.memoriesPruned = this.pruneMemories();
-
-      // Step 5: Extract skills (simplified)
-      stats.skillsExtracted = this.extractSkills(recentMemories);
 
       // Step 6: Create backup
       this.createBackup();
@@ -147,9 +154,20 @@ export class ConsolidationPipeline {
   }
 
   /**
+   * Get distinct namespaces from memories table
+   */
+  private getDistinctNamespaces(): string[] {
+    const rows = this.db.prepare(
+      "SELECT DISTINCT namespace FROM memories WHERE namespace IS NOT NULL"
+    ).all() as any[];
+    if (rows.length === 0) return ['default'];
+    return rows.map(r => r.namespace);
+  }
+
+  /**
    * Detect simple conflicts (temporal impossibilities, contradictions)
    */
-  private detectConflicts(): number {
+  private detectConflicts(namespace: string = 'default'): number {
     let detected = 0;
 
     // Temporal conflicts: same property, overlapping time ranges, different values
@@ -161,7 +179,8 @@ export class ConsolidationPipeline {
         AND f1.value != f2.value
         AND f1.valid_until IS NULL
         AND f2.valid_until IS NULL
-    `).all() as any[];
+        AND f1.namespace = ? AND f2.namespace = ?
+    `).all(namespace, namespace) as any[];
 
     for (const conflict of conflicts) {
       // Check if already flagged
@@ -173,8 +192,8 @@ export class ConsolidationPipeline {
         const conflictId = 'conflict_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
         this.db.prepare(`
-          INSERT INTO conflicts (id, fact_id_1, fact_id_2, conflict_type, description, severity, resolution_status)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO conflicts (id, fact_id_1, fact_id_2, conflict_type, description, severity, resolution_status, namespace)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           conflictId,
           conflict.id1,
@@ -182,7 +201,8 @@ export class ConsolidationPipeline {
           'contradiction',
           `Conflicting values for ${conflict.property}: "${conflict.val1}" vs "${conflict.val2}"`,
           'medium',
-          'flagged'
+          'flagged',
+          namespace
         );
 
         // Lower confidence on both facts
@@ -199,7 +219,7 @@ export class ConsolidationPipeline {
   /**
    * Prune low-value memories
    */
-  private pruneMemories(): number {
+  private pruneMemories(namespace: string = 'default'): number {
     // Find relationships to prune (weak relationships with low-access entities)
     const toPrune = this.db.prepare(`
       SELECT r.id
@@ -209,7 +229,8 @@ export class ConsolidationPipeline {
       WHERE r.strength < 0.05
         AND source.access_count < 3
         AND target.access_count < 3
-    `).all() as any[];
+        AND r.namespace = ?
+    `).all(namespace) as any[];
 
     // Delete them
     let deleted = 0;
@@ -224,14 +245,14 @@ export class ConsolidationPipeline {
   /**
    * Extract skills from positive interactions
    */
-  private extractSkills(memories: any[]): number {
+  private extractSkills(memories: any[], namespace: string = 'default'): number {
     let extracted = 0;
 
     for (const memory of memories) {
       // Look for repeated patterns
       if (memory.topics && memory.topics.includes('analysis')) {
         // Check if skill already exists
-        const existing = this.skillLibrary.search('data analysis', 1);
+        const existing = this.skillLibrary.search('data analysis', 1, namespace);
 
         if (existing.length === 0) {
           this.skillLibrary.addSkill({
@@ -239,7 +260,7 @@ export class ConsolidationPipeline {
             description: 'Analyze datasets and provide insights',
             category: 'analysis',
             triggers: ['analyze', 'data', 'insights'],
-          });
+          }, namespace);
           extracted++;
         }
       }

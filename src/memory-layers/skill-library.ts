@@ -56,7 +56,7 @@ export class SkillLibrary {
     this.lazyLoader = new LazyLoadingSkillLibrary(db);
   }
 
-  addSkill(skill: Omit<Skill, 'id' | 'successCount' | 'failureCount' | 'avgSatisfaction'>): string {
+  addSkill(skill: Omit<Skill, 'id' | 'successCount' | 'failureCount' | 'avgSatisfaction'>, namespace: string = 'default'): string {
     const id = 'skill_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
     // Generate summary from description (first sentence or 100 chars)
@@ -67,27 +67,28 @@ export class SkillLibrary {
     this.db.prepare(`
       INSERT INTO skills (
         id, name, description, summary, category, triggers,
-        success_count, failure_count, avg_user_satisfaction, is_archived
+        success_count, failure_count, avg_user_satisfaction, is_archived, namespace
       )
-      VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0.5, 0)
+      VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0.5, 0, ?)
     `).run(
       id,
       skill.name,
       skill.description,
       summary,
       skill.category,
-      JSON.stringify(skill.triggers)
+      JSON.stringify(skill.triggers),
+      namespace
     );
 
     return id;
   }
 
-  search(query: string, limit: number = 5): Skill[] {
+  search(query: string, limit: number = 5, namespace: string = 'default'): Skill[] {
     const queryLower = query.toLowerCase();
 
     const skills = this.db.prepare(
-      'SELECT * FROM skills ORDER BY avg_user_satisfaction DESC, success_count DESC'
-    ).all() as any[];
+      'SELECT * FROM skills WHERE namespace = ? ORDER BY avg_user_satisfaction DESC, success_count DESC'
+    ).all(namespace) as any[];
 
     const scored = skills
       .map(skill => {
@@ -116,7 +117,7 @@ export class SkillLibrary {
     return scored.slice(0, limit);
   }
 
-  recordSuccess(skillId: string, satisfaction: number): void {
+  recordSuccess(skillId: string, satisfaction: number, _namespace: string = 'default'): void {
     const skill = this.db.prepare('SELECT * FROM skills WHERE id = ?').get(skillId) as any;
 
     if (skill) {
@@ -128,7 +129,7 @@ export class SkillLibrary {
     }
   }
 
-  recordFailure(skillId: string): void {
+  recordFailure(skillId: string, _namespace: string = 'default'): void {
     this.db.prepare('UPDATE skills SET failure_count = failure_count + 1 WHERE id = ?').run(skillId);
   }
 
@@ -149,8 +150,8 @@ export class SkillLibrary {
    * @param category - Optional category filter
    * @returns Array of SkillSummary objects
    */
-  getSummaries(limit: number = 20, category?: string): SkillSummary[] {
-    return this.lazyLoader.getSummaries(limit, category);
+  getSummaries(limit: number = 20, category?: string, namespace: string = 'default'): SkillSummary[] {
+    return this.lazyLoader.getSummaries(limit, category, namespace);
   }
 
   /**
@@ -162,7 +163,7 @@ export class SkillLibrary {
    * @param skillId - The skill ID to load
    * @returns FullSkill object or null if not found
    */
-  loadFull(skillId: string): FullSkill | null {
+  loadFull(skillId: string, _namespace: string = 'default'): FullSkill | null {
     const fullSkill = this.lazyLoader.loadFull(skillId);
 
     // Update last_used timestamp when loading a skill
@@ -185,8 +186,8 @@ export class SkillLibrary {
    * @param query - The user query
    * @returns InvocationDetection result with skill ID if detected
    */
-  detectInvocation(query: string): InvocationDetection {
-    const summaries = this.getSummaries(100); // Get all summaries for matching
+  detectInvocation(query: string, namespace: string = 'default'): InvocationDetection {
+    const summaries = this.getSummaries(100, undefined, namespace); // Get all summaries for matching
     return this.lazyLoader.detectInvocation(query, summaries);
   }
 

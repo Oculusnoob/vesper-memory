@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-02-06
+
+### Added
+
+**Multi-Agent Namespace Isolation**
+- All memory operations now support `namespace` parameter for multi-agent isolation
+- Default namespace is `"default"` - fully backward compatible
+- Namespace column added to: memories, entities, relationships, facts, conflicts, skills
+- Redis keys prefixed with namespace: `{namespace}:working:{id}`
+- Qdrant payload filtering by namespace
+
+**Agent Attribution**
+- `agent_id`, `agent_role`, `task_id` fields on stored memories
+- Filter retrieval by agent_id, task_id, or exclude_agent
+- Track which agent stored which memory
+
+**Decision Memory Type**
+- New `memory_type: "decision"` for architectural and project decisions
+- Reduced temporal decay (decay_factor: 0.25) so decisions persist longer
+- Supersedes mechanism: new decisions can mark old ones as superseded
+- Automatic conflict detection against existing decisions
+
+**4 New MCP Tools**
+- `share_context`: Copy memories between namespaces with handoff tracking
+- `store_decision`: Store decisions with reduced decay and conflict detection
+- `list_namespaces`: Discover all namespaces with counts
+- `namespace_stats`: Per-namespace breakdown of memories, entities, skills, agents
+
+**Validation**
+- Added `NamespaceSchema` (alphanumeric + hyphens/underscores)
+- Extended memory_type enum to include `"decision"`
+- All existing tool schemas updated with optional `namespace` parameter
+
+**Tests**
+- 112 new tests across 5 test files (namespace-isolation, agent-attribution, share-context, store-decision, namespace-tools)
+- Total: 909 tests passing (up from 632)
+
+### Changed
+- `SemanticMemoryLayer`: all methods accept `namespace` parameter
+- `SkillLibrary` / `SkillLazyLoader`: namespace-scoped queries
+- `ConflictDetector`: namespace-scoped detection
+- `ConsolidationPipeline`: iterates all namespaces when none specified
+- `SmartRouter`: `RoutingContext` includes optional `namespace`
+- `HybridSearchEngine`: `filter` parameter for Qdrant namespace filtering
+- `WorkingMemoryLayer`: Redis keys use `{namespace}:` prefix
+
+### Backward Compatibility
+- All new columns use `DEFAULT 'default'` - existing data automatically works
+- All new tool params are optional - existing tool calls unchanged
+- Old Redis keys expire naturally via 7-day TTL
+- Qdrant: falls back to unfiltered search for `"default"` namespace
+
+---
+
 ## [0.4.0] - 2026-02-03
 
 ### BREAKING CHANGES

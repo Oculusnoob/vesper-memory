@@ -39,6 +39,19 @@ describe('ConsolidationPipeline', () => {
 
     // Create schema
     db.exec(`
+      CREATE TABLE memories (
+        id TEXT PRIMARY KEY,
+        content TEXT NOT NULL,
+        memory_type TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        metadata TEXT,
+        namespace TEXT DEFAULT 'default',
+        agent_id TEXT,
+        agent_role TEXT,
+        task_id TEXT
+      );
+
       CREATE TABLE entities (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -47,7 +60,8 @@ describe('ConsolidationPipeline', () => {
         confidence REAL DEFAULT 1.0,
         created_at TEXT NOT NULL,
         last_accessed TEXT NOT NULL,
-        access_count INTEGER DEFAULT 1
+        access_count INTEGER DEFAULT 1,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE relationships (
@@ -58,7 +72,8 @@ describe('ConsolidationPipeline', () => {
         strength REAL DEFAULT 0.8,
         evidence TEXT,
         created_at TEXT NOT NULL,
-        last_reinforced TEXT NOT NULL
+        last_reinforced TEXT NOT NULL,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE facts (
@@ -69,7 +84,8 @@ describe('ConsolidationPipeline', () => {
         confidence REAL DEFAULT 1.0,
         valid_from TEXT,
         valid_until TEXT,
-        source_conversation TEXT
+        source_conversation TEXT,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE conflicts (
@@ -79,7 +95,8 @@ describe('ConsolidationPipeline', () => {
         conflict_type TEXT,
         description TEXT,
         severity TEXT,
-        resolution_status TEXT
+        resolution_status TEXT,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE skills (
@@ -94,7 +111,8 @@ describe('ConsolidationPipeline', () => {
         avg_user_satisfaction REAL DEFAULT 0.5,
         is_archived INTEGER DEFAULT 0,
         last_used TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE backup_metadata (

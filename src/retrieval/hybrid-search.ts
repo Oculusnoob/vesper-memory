@@ -163,7 +163,8 @@ export class HybridSearchEngine {
    */
   async denseSearch(
     queryVector: number[],
-    topK: number = 5
+    topK: number = 5,
+    filter?: Record<string, unknown>
   ): Promise<DenseSearchResult[]> {
     // Validate vector dimensions and values (SEC-005)
     validateVector(queryVector, this.vectorSize);
@@ -174,6 +175,7 @@ export class HybridSearchEngine {
         limit: topK,
         with_payload: true,
         with_vector: false,
+        ...(filter ? { filter } : {}),
       });
 
       return searchResults.map((result) => ({
@@ -332,10 +334,11 @@ export class HybridSearchEngine {
    */
   async hybridSearch(
     queryVector: number[],
-    topK: number = 5
+    topK: number = 5,
+    filter?: Record<string, unknown>
   ): Promise<HybridSearchResult[]> {
     // Phase 1: Dense search only
-    const denseResults = await this.denseSearch(queryVector, topK);
+    const denseResults = await this.denseSearch(queryVector, topK, filter);
 
     // Phase 2: Will add sparse and BM25
     // const sparseResults = await this.sparseSearch(querySparseVector, topK);

@@ -5,6 +5,7 @@
  * Simple but effective - instant recall for recent context.
  *
  * Enhanced with skill caching for lazy loading support.
+ * v0.5.0: Added namespace parameter for multi-agent isolation.
  */
 
 import { Redis } from 'ioredis';
@@ -30,34 +31,36 @@ export class WorkingMemoryLayer {
     this.MAX_CONVERSATIONS = maxConversations;
   }
 
-  async store(memory: WorkingMemory): Promise<void> {
-    const key = `working:${memory.conversationId}`;
+  async store(memory: WorkingMemory, namespace: string = 'default'): Promise<void> {
+    const key = `${namespace}:working:${memory.conversationId}`;
+    const listKey = `${namespace}:working:recent`;
     const ttl = this.TTL_DAYS * 24 * 60 * 60;
 
     await this.redis.setex(key, ttl, JSON.stringify(memory));
-    await this.redis.lpush('working:recent', memory.conversationId);
+    await this.redis.lpush(listKey, memory.conversationId);
 
     // Get IDs that will be evicted (beyond MAX_CONVERSATIONS)
-    const allIds = await this.redis.lrange('working:recent', 0, -1);
+    const allIds = await this.redis.lrange(listKey, 0, -1);
     const toEvict = allIds.slice(this.MAX_CONVERSATIONS);
 
-    await this.redis.ltrim('working:recent', 0, this.MAX_CONVERSATIONS - 1);
+    await this.redis.ltrim(listKey, 0, this.MAX_CONVERSATIONS - 1);
 
     // Delete evicted conversation data
     for (const id of toEvict) {
-      await this.redis.del(`working:${id}`);
+      await this.redis.del(`${namespace}:working:${id}`);
     }
   }
 
-  async search(query: string, limit: number = 3): Promise<Array<{ memory: WorkingMemory; similarity: number }>> {
-    const recentIds = await this.redis.lrange('working:recent', 0, this.MAX_CONVERSATIONS - 1);
+  async search(query: string, limit: number = 3, namespace: string = 'default'): Promise<Array<{ memory: WorkingMemory; similarity: number }>> {
+    const listKey = `${namespace}:working:recent`;
+    const recentIds = await this.redis.lrange(listKey, 0, this.MAX_CONVERSATIONS - 1);
     const results: Array<{ memory: WorkingMemory; similarity: number }> = [];
 
     const queryLower = query.toLowerCase();
     const queryWords = queryLower.split(/\s+/);
 
     for (const id of recentIds) {
-      const data = await this.redis.get(`working:${id}`);
+      const data = await this.redis.get(`${namespace}:working:${id}`);
       if (!data) continue;
 
       const memory = JSON.parse(data) as WorkingMemory;
@@ -73,38 +76,40 @@ export class WorkingMemoryLayer {
     return results.sort((a, b) => b.similarity - a.similarity).slice(0, limit);
   }
 
-  async getRecent(limit: number = 5): Promise<WorkingMemory[]> {
-    const recentIds = await this.redis.lrange('working:recent', 0, limit - 1);
+  async getRecent(limit: number = 5, namespace: string = 'default'): Promise<WorkingMemory[]> {
+    const listKey = `${namespace}:working:recent`;
+    const recentIds = await this.redis.lrange(listKey, 0, limit - 1);
     const memories: WorkingMemory[] = [];
 
     for (const id of recentIds) {
-      const data = await this.redis.get(`working:${id}`);
+      const data = await this.redis.get(`${namespace}:working:${id}`);
       if (data) memories.push(JSON.parse(data));
     }
 
     return memories;
   }
 
-  async getAll(limit?: number): Promise<WorkingMemory[]> {
-    return this.getRecent(limit || this.MAX_CONVERSATIONS);
+  async getAll(limit?: number, namespace: string = 'default'): Promise<WorkingMemory[]> {
+    return this.getRecent(limit || this.MAX_CONVERSATIONS, namespace);
   }
 
-  async get(conversationId: string): Promise<WorkingMemory | null> {
-    const data = await this.redis.get(`working:${conversationId}`);
+  async get(conversationId: string, namespace: string = 'default'): Promise<WorkingMemory | null> {
+    const data = await this.redis.get(`${namespace}:working:${conversationId}`);
     return data ? JSON.parse(data) : null;
   }
 
-  async delete(conversationId: string): Promise<void> {
-    await this.redis.del(`working:${conversationId}`);
-    await this.redis.lrem('working:recent', 1, conversationId);
+  async delete(conversationId: string, namespace: string = 'default'): Promise<void> {
+    await this.redis.del(`${namespace}:working:${conversationId}`);
+    await this.redis.lrem(`${namespace}:working:recent`, 1, conversationId);
   }
 
-  async searchByEntities(entities: string[], limit: number = 3): Promise<Array<{ memory: WorkingMemory; similarity: number; matchedEntities: string[] }>> {
-    const recentIds = await this.redis.lrange('working:recent', 0, this.MAX_CONVERSATIONS - 1);
+  async searchByEntities(entities: string[], limit: number = 3, namespace: string = 'default'): Promise<Array<{ memory: WorkingMemory; similarity: number; matchedEntities: string[] }>> {
+    const listKey = `${namespace}:working:recent`;
+    const recentIds = await this.redis.lrange(listKey, 0, this.MAX_CONVERSATIONS - 1);
     const results: Array<{ memory: WorkingMemory; similarity: number; matchedEntities: string[] }> = [];
 
     for (const id of recentIds) {
-      const data = await this.redis.get(`working:${id}`);
+      const data = await this.redis.get(`${namespace}:working:${id}`);
       if (!data) continue;
 
       const memory = JSON.parse(data) as WorkingMemory;
@@ -121,12 +126,13 @@ export class WorkingMemoryLayer {
     return results.sort((a, b) => b.similarity - a.similarity).slice(0, limit);
   }
 
-  async searchByTopics(topics: string[], limit: number = 3): Promise<Array<{ memory: WorkingMemory; similarity: number; matchedTopics: string[] }>> {
-    const recentIds = await this.redis.lrange('working:recent', 0, this.MAX_CONVERSATIONS - 1);
+  async searchByTopics(topics: string[], limit: number = 3, namespace: string = 'default'): Promise<Array<{ memory: WorkingMemory; similarity: number; matchedTopics: string[] }>> {
+    const listKey = `${namespace}:working:recent`;
+    const recentIds = await this.redis.lrange(listKey, 0, this.MAX_CONVERSATIONS - 1);
     const results: Array<{ memory: WorkingMemory; similarity: number; matchedTopics: string[] }> = [];
 
     for (const id of recentIds) {
-      const data = await this.redis.get(`working:${id}`);
+      const data = await this.redis.get(`${namespace}:working:${id}`);
       if (!data) continue;
 
       const memory = JSON.parse(data) as WorkingMemory;
@@ -143,17 +149,18 @@ export class WorkingMemoryLayer {
     return results.sort((a, b) => b.similarity - a.similarity).slice(0, limit);
   }
 
-  async getStats(): Promise<{
+  async getStats(namespace: string = 'default'): Promise<{
     totalConversations: number;
     oldestConversation: Date | null;
     newestConversation: Date | null;
     totalTextSize: number;
   }> {
-    const recentIds = await this.redis.lrange('working:recent', 0, this.MAX_CONVERSATIONS - 1);
+    const listKey = `${namespace}:working:recent`;
+    const recentIds = await this.redis.lrange(listKey, 0, this.MAX_CONVERSATIONS - 1);
     const memories: WorkingMemory[] = [];
 
     for (const id of recentIds) {
-      const data = await this.redis.get(`working:${id}`);
+      const data = await this.redis.get(`${namespace}:working:${id}`);
       if (data) memories.push(JSON.parse(data));
     }
 
@@ -178,29 +185,24 @@ export class WorkingMemoryLayer {
   }
 
   /**
-   * Clear all working memory entries
+   * Clear all working memory entries for a namespace
    *
    * Uses SCAN instead of KEYS to avoid blocking Redis server.
-   * Deletes keys in batches to prevent memory exhaustion.
-   *
-   * Security: Prevents DoS attacks on Redis
    */
-  async clear(): Promise<void> {
+  async clear(namespace: string = 'default'): Promise<void> {
     let cursor = '0';
     const keysToDelete: string[] = [];
 
-    // Use SCAN to iterate through keys without blocking
     do {
       const [nextCursor, keys] = await this.redis.scan(
         cursor,
-        'MATCH', 'working:*',
+        'MATCH', `${namespace}:working:*`,
         'COUNT', 100
       );
       cursor = nextCursor;
       keysToDelete.push(...keys);
     } while (cursor !== '0');
 
-    // Delete in batches to avoid memory issues
     const BATCH_SIZE = 100;
     for (let i = 0; i < keysToDelete.length; i += BATCH_SIZE) {
       const batch = keysToDelete.slice(i, i + BATCH_SIZE);
@@ -212,15 +214,9 @@ export class WorkingMemoryLayer {
 
   /**
    * Cache a loaded skill in working memory
-   *
-   * Part of lazy loading system - caches full skills to avoid re-loading.
-   * Default TTL: 1 hour (3600 seconds)
-   *
-   * @param skill - Full skill implementation to cache
-   * @param ttl - Time-to-live in seconds (default: 3600)
    */
-  async cacheSkill(skill: FullSkill, ttl: number = 3600): Promise<void> {
-    const key = `skill:cache:${skill.id}`;
+  async cacheSkill(skill: FullSkill, ttl: number = 3600, namespace: string = 'default'): Promise<void> {
+    const key = `${namespace}:skill:cache:${skill.id}`;
     const cached: CachedSkill = {
       skill,
       loaded_at: new Date(),
@@ -234,15 +230,9 @@ export class WorkingMemoryLayer {
 
   /**
    * Get a cached skill from working memory
-   *
-   * Returns null if skill is not cached or has expired.
-   * Increments access count and updates cache on hit.
-   *
-   * @param skillId - Skill ID to retrieve
-   * @returns CachedSkill or null if not found
    */
-  async getCachedSkill(skillId: string): Promise<CachedSkill | null> {
-    const key = `skill:cache:${skillId}`;
+  async getCachedSkill(skillId: string, namespace: string = 'default'): Promise<CachedSkill | null> {
+    const key = `${namespace}:skill:cache:${skillId}`;
     const data = await this.redis.get(key);
 
     if (!data) {
@@ -250,11 +240,8 @@ export class WorkingMemoryLayer {
     }
 
     const cached = JSON.parse(data) as CachedSkill;
-
-    // Increment access count
     cached.access_count += 1;
 
-    // Update cache with new access count (keep same TTL)
     const ttl = await this.redis.ttl(key);
     if (ttl > 0) {
       await this.redis.setex(key, ttl, JSON.stringify(cached));
@@ -270,26 +257,18 @@ export class WorkingMemoryLayer {
 
   /**
    * Invalidate a cached skill
-   *
-   * Use when a skill is updated or deleted.
-   *
-   * @param skillId - Skill ID to invalidate
    */
-  async invalidateSkillCache(skillId: string): Promise<void> {
-    const key = `skill:cache:${skillId}`;
+  async invalidateSkillCache(skillId: string, namespace: string = 'default'): Promise<void> {
+    const key = `${namespace}:skill:cache:${skillId}`;
     await this.redis.del(key);
     console.debug(`[WorkingMemory] Invalidated skill cache: ${skillId}`);
   }
 
   /**
    * Get all cached skill IDs
-   *
-   * Useful for debugging and cache statistics.
-   *
-   * @returns Array of cached skill IDs
    */
-  async getCachedSkillIds(): Promise<string[]> {
-    const pattern = 'skill:cache:*';
+  async getCachedSkillIds(namespace: string = 'default'): Promise<string[]> {
+    const pattern = `${namespace}:skill:cache:*`;
     let cursor = '0';
     const skillIds: string[] = [];
 
@@ -301,9 +280,8 @@ export class WorkingMemoryLayer {
       );
       cursor = nextCursor;
 
-      // Extract skill IDs from keys
       for (const key of keys) {
-        const skillId = key.replace('skill:cache:', '');
+        const skillId = key.replace(`${namespace}:skill:cache:`, '');
         skillIds.push(skillId);
       }
     } while (cursor !== '0');
@@ -312,18 +290,16 @@ export class WorkingMemoryLayer {
   }
 
   /**
-   * Clear all cached skills
-   *
-   * Use for cache invalidation or testing.
+   * Clear all cached skills for a namespace
    */
-  async clearSkillCache(): Promise<void> {
+  async clearSkillCache(namespace: string = 'default'): Promise<void> {
     let cursor = '0';
     const keysToDelete: string[] = [];
 
     do {
       const [nextCursor, keys] = await this.redis.scan(
         cursor,
-        'MATCH', 'skill:cache:*',
+        'MATCH', `${namespace}:skill:cache:*`,
         'COUNT', 100
       );
       cursor = nextCursor;

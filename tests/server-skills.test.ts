@@ -46,7 +46,8 @@ describe('Skill Query Router Integration', () => {
         avg_user_satisfaction REAL DEFAULT 0.5,
         is_archived INTEGER DEFAULT 0,
         last_used TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        namespace TEXT DEFAULT 'default'
       );
     `);
 
@@ -321,7 +322,8 @@ describe('record_skill_outcome Integration', () => {
         avg_user_satisfaction REAL DEFAULT 0.5,
         is_archived INTEGER DEFAULT 0,
         last_used TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        namespace TEXT DEFAULT 'default'
       );
     `);
 

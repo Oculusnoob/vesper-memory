@@ -26,7 +26,8 @@ describe('ConflictDetector', () => {
         name TEXT,
         type TEXT,
         created_at TEXT,
-        description TEXT
+        description TEXT,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE facts (
@@ -36,7 +37,8 @@ describe('ConflictDetector', () => {
         value TEXT,
         confidence REAL,
         valid_from TEXT,
-        valid_until TEXT
+        valid_until TEXT,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE TABLE conflicts (
@@ -46,7 +48,8 @@ describe('ConflictDetector', () => {
         conflict_type TEXT,
         description TEXT,
         severity TEXT,
-        resolution_status TEXT
+        resolution_status TEXT,
+        namespace TEXT DEFAULT 'default'
       );
     `);
 

@@ -402,7 +402,8 @@ describe("Preference Query Handler", () => {
         confidence REAL DEFAULT 1.0,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         last_accessed TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        access_count INTEGER DEFAULT 1
+        access_count INTEGER DEFAULT 1,
+        namespace TEXT DEFAULT 'default'
       );
       CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(type);
       CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name);

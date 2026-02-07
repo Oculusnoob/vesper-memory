@@ -26,6 +26,10 @@ const EXPECTED_TOOLS = [
   'vesper_status',
   'record_skill_outcome',
   'load_skill',  // Lazy loading tool for on-demand skill loading
+  'share_context',  // Multi-agent context sharing
+  'store_decision',  // Decision tracking
+  'list_namespaces',  // Namespace discovery
+  'namespace_stats',  // Namespace statistics
 ];
 
 /**
@@ -67,6 +71,22 @@ const EXPECTED_TOOL_SCHEMAS = {
   load_skill: {
     required: ['skill_id'],
     properties: ['skill_id'],
+  },
+  share_context: {
+    required: ['source_namespace', 'target_namespace'],
+    properties: ['source_namespace', 'target_namespace', 'task_id', 'query', 'max_items', 'include_skills', 'include_entities'],
+  },
+  store_decision: {
+    required: ['content'],
+    properties: ['content', 'namespace', 'agent_id', 'agent_role', 'task_id', 'supersedes', 'metadata'],
+  },
+  list_namespaces: {
+    required: [],
+    properties: [],
+  },
+  namespace_stats: {
+    required: ['namespace'],
+    properties: ['namespace'],
   },
 };
 
@@ -158,7 +178,7 @@ describe('MCP Server Tools Discovery', () => {
       expect(toolNames.length).toBe(uniqueNames.size);
     });
 
-    it('should have exactly 8 tools', () => {
+    it('should have exactly 13 tools', () => {
       expect(TOOLS.length).toBe(EXPECTED_TOOLS.length);
     });
   });
@@ -181,6 +201,15 @@ describe('MCP Server Tools Discovery', () => {
 
       // Skill feedback tool
       expect(toolNames[7]).toBe('record_skill_outcome');
+
+      // Lazy loading tool
+      expect(toolNames[8]).toBe('load_skill');
+
+      // Multi-agent namespace tools
+      expect(toolNames[9]).toBe('share_context');
+      expect(toolNames[10]).toBe('store_decision');
+      expect(toolNames[11]).toBe('list_namespaces');
+      expect(toolNames[12]).toBe('namespace_stats');
     });
   });
 });
@@ -422,7 +451,7 @@ describe('Environment Independence', () => {
     // Count tool definitions
     const toolMatches = source.match(/{\s*name:\s*["'][^"']+["'],\s*description:/g);
     expect(toolMatches).toBeDefined();
-    expect(toolMatches!.length).toBe(9);  // Updated for load_skill tool
+    expect(toolMatches!.length).toBe(13);  // Updated for namespace tools
   });
 });
 

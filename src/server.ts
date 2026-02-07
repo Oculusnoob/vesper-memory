@@ -30,6 +30,10 @@ import {
   GetStatsInputSchema,
   RecordSkillOutcomeInputSchema,
   LoadSkillInputSchema,
+  ShareContextInputSchema,
+  StoreDecisionInputSchema,
+  ListNamespacesInputSchema,
+  NamespaceStatsInputSchema,
 } from "./utils/validation.js";
 import { getSqlitePath, ensureDirectories } from "./utils/paths.js";
 import { createEmbeddingClient, EmbeddingClient } from "./embeddings/client.js";
@@ -69,6 +73,11 @@ let vesperEnabled = true;
 /**
  * Tool definitions for the MCP server
  */
+const NAMESPACE_PROP = {
+  type: "string",
+  description: "Namespace for multi-agent isolation (default: 'default')",
+};
+
 const TOOLS = [
   {
     name: "store_memory",
@@ -83,7 +92,7 @@ const TOOLS = [
         },
         memory_type: {
           type: "string",
-          enum: ["episodic", "semantic", "procedural"],
+          enum: ["episodic", "semantic", "procedural", "decision"],
           description: "Type of memory being stored",
         },
         metadata: {
@@ -91,6 +100,10 @@ const TOOLS = [
           description: "Additional metadata (timestamp, source, tags, etc.)",
           additionalProperties: true,
         },
+        namespace: NAMESPACE_PROP,
+        agent_id: { type: "string", description: "ID of the agent storing this memory" },
+        agent_role: { type: "string", description: "Role of the agent (e.g., 'orchestrator', 'code-reviewer')" },
+        task_id: { type: "string", description: "Task ID this memory is associated with" },
       },
       required: ["content", "memory_type"],
     },
@@ -110,7 +123,7 @@ const TOOLS = [
           type: "array",
           items: { type: "string" },
           description:
-            "Filter by memory types (episodic, semantic, procedural). Omit for all types.",
+            "Filter by memory types (episodic, semantic, procedural, decision). Omit for all types.",
         },
         max_results: {
           type: "number",
@@ -121,6 +134,10 @@ const TOOLS = [
           enum: ["fast_path", "semantic", "full_text", "graph"],
           description: "Retrieval strategy to use (default: auto-select)",
         },
+        namespace: NAMESPACE_PROP,
+        agent_id: { type: "string", description: "Filter by agent ID" },
+        task_id: { type: "string", description: "Filter by task ID" },
+        exclude_agent: { type: "string", description: "Exclude memories from this agent" },
       },
       required: ["query"],
     },
@@ -140,6 +157,7 @@ const TOOLS = [
           type: "string",
           description: "Optional filter by memory type",
         },
+        namespace: NAMESPACE_PROP,
       },
     },
   },
@@ -154,6 +172,7 @@ const TOOLS = [
           type: "boolean",
           description: "Include detailed per-layer statistics (default: false)",
         },
+        namespace: NAMESPACE_PROP,
       },
     },
   },
@@ -204,6 +223,7 @@ const TOOLS = [
           type: "number",
           description: "User satisfaction score (0-1). Required for success outcome.",
         },
+        namespace: NAMESPACE_PROP,
       },
       required: ["skill_id", "outcome"],
     },
@@ -219,8 +239,66 @@ const TOOLS = [
           type: "string",
           description: "The ID of the skill to load",
         },
+        namespace: NAMESPACE_PROP,
       },
       required: ["skill_id"],
+    },
+  },
+  {
+    name: "share_context",
+    description:
+      "Share context (memories, skills, entities) from one namespace to another. Used for agent handoffs in multi-agent workflows.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        source_namespace: { type: "string", description: "Namespace to share from" },
+        target_namespace: { type: "string", description: "Namespace to share to" },
+        task_id: { type: "string", description: "Filter source memories by task ID" },
+        query: { type: "string", description: "Semantic query to select relevant memories" },
+        max_items: { type: "number", description: "Max items to share (default: 10)" },
+        include_skills: { type: "boolean", description: "Include matching skills (default: false)" },
+        include_entities: { type: "boolean", description: "Include related entities (default: true)" },
+      },
+      required: ["source_namespace", "target_namespace"],
+    },
+  },
+  {
+    name: "store_decision",
+    description:
+      "Store an architectural or design decision with reduced decay and automatic conflict detection against existing decisions.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        content: { type: "string", description: "The decision content" },
+        namespace: NAMESPACE_PROP,
+        agent_id: { type: "string", description: "ID of the agent making this decision" },
+        agent_role: { type: "string", description: "Role of the agent" },
+        task_id: { type: "string", description: "Related task ID" },
+        supersedes: { type: "string", description: "ID of a previous decision this replaces" },
+        metadata: { type: "object", description: "Additional metadata", additionalProperties: true },
+      },
+      required: ["content"],
+    },
+  },
+  {
+    name: "list_namespaces",
+    description:
+      "List all namespaces with memory counts. Useful for discovering active agent namespaces.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+    },
+  },
+  {
+    name: "namespace_stats",
+    description:
+      "Get detailed statistics for a specific namespace including memory counts, entity counts, skill counts, and active agents.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        namespace: { type: "string", description: "The namespace to get stats for" },
+      },
+      required: ["namespace"],
     },
   },
 ];
@@ -517,6 +595,21 @@ function initializeSqliteSchema(): void {
       updated_at INTEGER
     );
   `);
+
+  // v0.5.0 namespace migration for memories table
+  const memoryNamespaceCols = [
+    "ALTER TABLE memories ADD COLUMN namespace TEXT DEFAULT 'default'",
+    "ALTER TABLE memories ADD COLUMN agent_id TEXT",
+    "ALTER TABLE memories ADD COLUMN agent_role TEXT",
+    "ALTER TABLE memories ADD COLUMN task_id TEXT",
+  ];
+  for (const sql of memoryNamespaceCols) {
+    try { connections.sqlite.exec(sql); } catch (_) { /* column already exists */ }
+  }
+  connections.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS idx_memories_namespace ON memories(namespace);
+    CREATE INDEX IF NOT EXISTS idx_memories_agent ON memories(namespace, agent_id);
+  `);
 }
 
 /**
@@ -587,6 +680,23 @@ function initializeSemanticMemorySchema(): void {
       expires_at TEXT NOT NULL
     );
   `);
+
+  // v0.5.0 namespace migration for semantic memory tables
+  const semanticNamespaceMigrations = [
+    "ALTER TABLE entities ADD COLUMN namespace TEXT DEFAULT 'default'",
+    "ALTER TABLE relationships ADD COLUMN namespace TEXT DEFAULT 'default'",
+    "ALTER TABLE facts ADD COLUMN namespace TEXT DEFAULT 'default'",
+    "ALTER TABLE conflicts ADD COLUMN namespace TEXT DEFAULT 'default'",
+  ];
+  for (const sql of semanticNamespaceMigrations) {
+    try { connections.sqlite.exec(sql); } catch (_) { /* column already exists */ }
+  }
+  connections.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS idx_entities_namespace ON entities(namespace);
+    CREATE INDEX IF NOT EXISTS idx_relationships_namespace ON relationships(namespace);
+    CREATE INDEX IF NOT EXISTS idx_facts_namespace ON facts(namespace);
+    CREATE INDEX IF NOT EXISTS idx_conflicts_namespace ON conflicts(namespace);
+  `);
 }
 
 /**
@@ -611,6 +721,10 @@ function initializeSkillLibrarySchema(): void {
 
     CREATE INDEX IF NOT EXISTS idx_skills_category ON skills(category);
   `);
+
+  // v0.5.0 namespace migration for skills table
+  try { connections.sqlite.exec("ALTER TABLE skills ADD COLUMN namespace TEXT DEFAULT 'default'"); } catch (_) { /* column already exists */ }
+  connections.sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_skills_namespace ON skills(namespace);`);
 
   // Apply lazy loading migration (idempotent - safe to run multiple times)
   try {
@@ -771,6 +885,7 @@ async function handleStoreMemory(input: unknown): Promise<Record<string, unknown
   try {
     // Validate input
     const validatedInput = validateInput(StoreMemoryInputSchema, input);
+    const namespace = validatedInput.namespace || 'default';
     // Use pure UUID for Qdrant compatibility
     const id = randomUUID();
     const now = Date.now();
@@ -789,10 +904,10 @@ async function handleStoreMemory(input: unknown): Promise<Record<string, unknown
       }
     }
 
-    // Store in SQLite
+    // Store in SQLite with namespace and agent attribution
     const stmt = connections.sqlite.prepare(`
-      INSERT INTO memories (id, content, memory_type, created_at, updated_at, metadata)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO memories (id, content, memory_type, created_at, updated_at, metadata, namespace, agent_id, agent_role, task_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -801,16 +916,23 @@ async function handleStoreMemory(input: unknown): Promise<Record<string, unknown
       validatedInput.memory_type,
       now,
       now,
-      JSON.stringify(validatedInput.metadata || {})
+      JSON.stringify(validatedInput.metadata || {}),
+      namespace,
+      validatedInput.agent_id || null,
+      validatedInput.agent_role || null,
+      validatedInput.task_id || null
     );
 
-    // Store embedding in Qdrant if available
+    // Store embedding in Qdrant if available (include namespace in payload)
     if (embedding && connections.hybridSearch) {
       try {
         await connections.hybridSearch.upsertMemory(id, embedding, {
           content: validatedInput.content,
           memory_type: validatedInput.memory_type,
           created_at: now,
+          namespace,
+          agent_id: validatedInput.agent_id,
+          task_id: validatedInput.task_id,
           ...validatedInput.metadata,
         });
         console.error(`[INFO] Stored embedding in Qdrant for ${id}`);
@@ -827,12 +949,13 @@ async function handleStoreMemory(input: unknown): Promise<Record<string, unknown
     }
 
     console.error(
-      `[INFO] Memory stored: ${id} (type: ${validatedInput.memory_type}, length: ${validatedInput.content.length}, embedding: ${embedding ? "yes" : "no"})`
+      `[INFO] Memory stored: ${id} (type: ${validatedInput.memory_type}, ns: ${namespace}, length: ${validatedInput.content.length}, embedding: ${embedding ? "yes" : "no"})`
     );
 
     return {
       success: true,
       memory_id: id,
+      namespace,
       timestamp: now,
       message: `Memory stored successfully (${validatedInput.memory_type})`,
       has_embedding: !!embedding,
@@ -859,7 +982,20 @@ async function handleRetrieveMemory(input: unknown): Promise<Record<string, unkn
   try {
     // Validate input
     const validatedInput = validateInput(RetrieveMemoryInputSchema, input);
+    const namespace = validatedInput.namespace || 'default';
     const maxResults = validatedInput.max_results || 5;
+
+    // Build Qdrant filter for namespace
+    const qdrantFilter: Record<string, unknown> = {
+      must: [
+        { key: "namespace", match: { value: namespace } },
+        ...(validatedInput.agent_id ? [{ key: "agent_id", match: { value: validatedInput.agent_id } }] : []),
+        ...(validatedInput.task_id ? [{ key: "task_id", match: { value: validatedInput.task_id } }] : []),
+      ],
+      ...(validatedInput.exclude_agent ? {
+        must_not: [{ key: "agent_id", match: { value: validatedInput.exclude_agent } }]
+      } : {}),
+    };
 
     // Try semantic search if embedding service is available
     if (connections.embeddingClient && connections.hybridSearch) {
@@ -867,19 +1003,30 @@ async function handleRetrieveMemory(input: unknown): Promise<Record<string, unkn
         // Generate query embedding
         const queryEmbedding = await connections.embeddingClient.embed(validatedInput.query);
 
-        // Perform hybrid search
-        const searchResults = await connections.hybridSearch.hybridSearch(
+        // Perform hybrid search with namespace filter
+        let searchResults = await connections.hybridSearch.hybridSearch(
           queryEmbedding,
-          maxResults
+          maxResults,
+          qdrantFilter
         );
 
+        // Fallback: if namespace is "default" and filtered search returns empty,
+        // retry without filter (backward compat for pre-namespace vectors)
+        if (searchResults.length === 0 && namespace === 'default') {
+          searchResults = await connections.hybridSearch.hybridSearch(
+            queryEmbedding,
+            maxResults
+          );
+        }
+
         console.error(
-          `[INFO] Semantic search: query="${validatedInput.query}", results=${searchResults.length}`
+          `[INFO] Semantic search: query="${validatedInput.query}", ns=${namespace}, results=${searchResults.length}`
         );
 
         return {
           success: true,
           query: validatedInput.query,
+          namespace,
           routing_strategy: "semantic",
           results: searchResults.map((r) => ({
             id: r.id,
@@ -900,15 +1047,29 @@ async function handleRetrieveMemory(input: unknown): Promise<Record<string, unkn
       }
     }
 
-    // Fallback: SQL-based text search
-    let query = "SELECT id, content, memory_type, created_at, metadata FROM memories";
-    const params: unknown[] = [];
+    // Fallback: SQL-based text search with namespace filter
+    let query = "SELECT id, content, memory_type, created_at, metadata, agent_id, task_id FROM memories WHERE namespace = ?";
+    const params: unknown[] = [namespace];
 
     // Add type filter if specified
     if (validatedInput.memory_types && validatedInput.memory_types.length > 0) {
       const placeholders = validatedInput.memory_types.map(() => "?").join(",");
-      query += ` WHERE memory_type IN (${placeholders})`;
+      query += ` AND memory_type IN (${placeholders})`;
       params.push(...validatedInput.memory_types);
+    }
+
+    // Add agent/task filters
+    if (validatedInput.agent_id) {
+      query += " AND agent_id = ?";
+      params.push(validatedInput.agent_id);
+    }
+    if (validatedInput.task_id) {
+      query += " AND task_id = ?";
+      params.push(validatedInput.task_id);
+    }
+    if (validatedInput.exclude_agent) {
+      query += " AND (agent_id IS NULL OR agent_id != ?)";
+      params.push(validatedInput.exclude_agent);
     }
 
     query += " ORDER BY created_at DESC LIMIT ?";
@@ -921,21 +1082,26 @@ async function handleRetrieveMemory(input: unknown): Promise<Record<string, unkn
       memory_type: string;
       created_at: number;
       metadata: string;
+      agent_id: string | null;
+      task_id: string | null;
     }>;
 
     console.error(
-      `[INFO] Text search (fallback): query="${validatedInput.query}", results=${results.length}`
+      `[INFO] Text search (fallback): query="${validatedInput.query}", ns=${namespace}, results=${results.length}`
     );
 
     return {
       success: true,
       query: validatedInput.query,
+      namespace,
       routing_strategy: "text_fallback",
       results: results.map((r) => ({
         id: r.id,
         content: r.content,
         memory_type: r.memory_type,
         created_at: r.created_at,
+        agent_id: r.agent_id,
+        task_id: r.task_id,
         metadata: JSON.parse(r.metadata || "{}"),
       })),
       count: results.length,
@@ -962,13 +1128,14 @@ async function handleListRecent(input: unknown): Promise<Record<string, unknown>
   try {
     // Validate input
     const validatedInput = validateInput(ListRecentInputSchema, input);
+    const namespace = validatedInput.namespace || 'default';
     const limit = validatedInput.limit || 5;
     let query =
-      "SELECT id, content, memory_type, created_at FROM memories";
-    const params: unknown[] = [];
+      "SELECT id, content, memory_type, created_at, agent_id, task_id FROM memories WHERE namespace = ?";
+    const params: unknown[] = [namespace];
 
     if (validatedInput.memory_type) {
-      query += " WHERE memory_type = ?";
+      query += " AND memory_type = ?";
       params.push(validatedInput.memory_type);
     }
 
@@ -981,14 +1148,17 @@ async function handleListRecent(input: unknown): Promise<Record<string, unknown>
       content: string;
       memory_type: string;
       created_at: number;
+      agent_id: string | null;
+      task_id: string | null;
     }>;
 
     console.error(
-      `[INFO] Listed ${results.length} recent memories (limit=${limit}, type=${validatedInput.memory_type || "all"})`
+      `[INFO] Listed ${results.length} recent memories (ns=${namespace}, limit=${limit}, type=${validatedInput.memory_type || "all"})`
     );
 
     return {
       success: true,
+      namespace,
       limit,
       memory_type_filter: validatedInput.memory_type || null,
       entries: results.map((r) => ({
@@ -996,6 +1166,8 @@ async function handleListRecent(input: unknown): Promise<Record<string, unknown>
         content: r.content,
         memory_type: r.memory_type,
         created_at: r.created_at,
+        agent_id: r.agent_id,
+        task_id: r.task_id,
       })),
       count: results.length,
     };
@@ -1021,17 +1193,19 @@ async function handleGetStats(input: unknown): Promise<Record<string, unknown>> 
   try {
     // Validate input
     const validatedInput = validateInput(GetStatsInputSchema, input);
-    const countStmt = connections.sqlite.prepare("SELECT COUNT(*) as count FROM memories");
-    const countResult = countStmt.get() as { count: number };
+    const namespace = validatedInput.namespace || 'default';
+    const countStmt = connections.sqlite.prepare("SELECT COUNT(*) as count FROM memories WHERE namespace = ?");
+    const countResult = countStmt.get(namespace) as { count: number };
     const totalMemories = countResult.count;
 
     const typeStmt = connections.sqlite.prepare(`
-      SELECT memory_type, COUNT(*) as count FROM memories GROUP BY memory_type
+      SELECT memory_type, COUNT(*) as count FROM memories WHERE namespace = ? GROUP BY memory_type
     `);
-    const typeResults = typeStmt.all() as Array<{ memory_type: string; count: number }>;
+    const typeResults = typeStmt.all(namespace) as Array<{ memory_type: string; count: number }>;
 
     const stats: Record<string, unknown> = {
       success: true,
+      namespace,
       timestamp: Date.now(),
       total_memories: totalMemories,
       redis_connected: connections.redis ? true : false,
@@ -1285,6 +1459,284 @@ async function handleLoadSkill(input: unknown): Promise<Record<string, unknown>>
 }
 
 /**
+ * Handle share_context tool call
+ *
+ * Shares memories from one namespace to another for agent handoffs.
+ */
+async function handleShareContext(input: unknown): Promise<Record<string, unknown>> {
+  if (!connections.sqlite) {
+    throw new McpError(ErrorCode.InternalError, "SQLite database not available");
+  }
+
+  try {
+    const validatedInput = validateInput(ShareContextInputSchema, input);
+    const { source_namespace, target_namespace } = validatedInput;
+    const maxItems = validatedInput.max_items || 10;
+    const now = Date.now();
+    const sharedItems: any[] = [];
+
+    // Query memories from source namespace
+    let memQuery = "SELECT id, content, memory_type, created_at, metadata, agent_id, task_id FROM memories WHERE namespace = ?";
+    const memParams: unknown[] = [source_namespace];
+
+    if (validatedInput.task_id) {
+      memQuery += " AND task_id = ?";
+      memParams.push(validatedInput.task_id);
+    }
+
+    memQuery += " ORDER BY created_at DESC LIMIT ?";
+    memParams.push(maxItems);
+
+    const memories = connections.sqlite.prepare(memQuery).all(...memParams) as any[];
+
+    // Copy memories to target namespace
+    for (const mem of memories) {
+      const newId = randomUUID();
+      connections.sqlite.prepare(`
+        INSERT INTO memories (id, content, memory_type, created_at, updated_at, metadata, namespace, agent_id, agent_role, task_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        newId, mem.content, mem.memory_type, mem.created_at, now,
+        mem.metadata, target_namespace, mem.agent_id, null, mem.task_id
+      );
+      sharedItems.push({ type: 'memory', id: newId, original_id: mem.id });
+    }
+
+    // Include entities if requested
+    let entityCount = 0;
+    if (validatedInput.include_entities) {
+      const entities = connections.sqlite.prepare(
+        "SELECT * FROM entities WHERE namespace = ? LIMIT ?"
+      ).all(source_namespace, maxItems) as any[];
+
+      for (const entity of entities) {
+        if (connections.semanticMemory) {
+          connections.semanticMemory.upsertEntity(
+            { name: entity.name, type: entity.type, description: entity.description, confidence: entity.confidence },
+            target_namespace
+          );
+          entityCount++;
+        }
+      }
+    }
+
+    // Store handoff event in target namespace
+    const handoffId = randomUUID();
+    connections.sqlite.prepare(`
+      INSERT INTO memories (id, content, memory_type, created_at, updated_at, metadata, namespace)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      handoffId,
+      `Context handoff from namespace '${source_namespace}': ${memories.length} memories, ${entityCount} entities shared`,
+      'episodic',
+      now, now,
+      JSON.stringify({ handoff: true, source_namespace, items_shared: sharedItems.length, entities_shared: entityCount }),
+      target_namespace
+    );
+
+    console.error(`[INFO] Shared ${sharedItems.length} memories + ${entityCount} entities from ${source_namespace} to ${target_namespace}`);
+
+    return {
+      success: true,
+      source_namespace,
+      target_namespace,
+      memories_shared: sharedItems.length,
+      entities_shared: entityCount,
+      handoff_id: handoffId,
+    };
+  } catch (err) {
+    throw new McpError(
+      ErrorCode.InternalError,
+      `Failed to share context: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
+
+/**
+ * Handle store_decision tool call
+ *
+ * Stores a decision with reduced decay and conflict detection.
+ */
+async function handleStoreDecision(input: unknown): Promise<Record<string, unknown>> {
+  if (!connections.sqlite) {
+    throw new McpError(ErrorCode.InternalError, "SQLite database not available");
+  }
+
+  try {
+    const validatedInput = validateInput(StoreDecisionInputSchema, input);
+    const namespace = validatedInput.namespace || 'default';
+    const id = randomUUID();
+    const now = Date.now();
+
+    // Build metadata with decay_factor
+    const metadata = {
+      ...(validatedInput.metadata || {}),
+      decay_factor: 0.25,
+      supersedes: validatedInput.supersedes || null,
+    };
+
+    // Store as decision memory type
+    connections.sqlite.prepare(`
+      INSERT INTO memories (id, content, memory_type, created_at, updated_at, metadata, namespace, agent_id, agent_role, task_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id, validatedInput.content, 'decision', now, now,
+      JSON.stringify(metadata), namespace,
+      validatedInput.agent_id || null,
+      validatedInput.agent_role || null,
+      validatedInput.task_id || null
+    );
+
+    // Generate embedding and store in Qdrant
+    let hasEmbedding = false;
+    if (connections.embeddingClient && connections.hybridSearch) {
+      try {
+        const embedding = await connections.embeddingClient.embed(validatedInput.content);
+        await connections.hybridSearch.upsertMemory(id, embedding, {
+          content: validatedInput.content,
+          memory_type: 'decision',
+          created_at: now,
+          namespace,
+          agent_id: validatedInput.agent_id,
+          task_id: validatedInput.task_id,
+          decay_factor: 0.25,
+        });
+        hasEmbedding = true;
+      } catch (err) {
+        console.error("[WARN] Failed to generate embedding for decision:", err instanceof Error ? err.message : String(err));
+      }
+    }
+
+    // If supersedes, mark the old decision's metadata
+    if (validatedInput.supersedes) {
+      const oldMem = connections.sqlite.prepare("SELECT metadata FROM memories WHERE id = ? AND namespace = ?").get(validatedInput.supersedes, namespace) as any;
+      if (oldMem) {
+        const oldMeta = JSON.parse(oldMem.metadata || '{}');
+        oldMeta.superseded_by = id;
+        connections.sqlite.prepare("UPDATE memories SET metadata = ?, updated_at = ? WHERE id = ?").run(
+          JSON.stringify(oldMeta), now, validatedInput.supersedes
+        );
+      }
+    }
+
+    // Check for conflicting decisions in same namespace
+    const existingDecisions = connections.sqlite.prepare(
+      "SELECT id, content FROM memories WHERE namespace = ? AND memory_type = 'decision' AND id != ? ORDER BY created_at DESC LIMIT 10"
+    ).all(namespace, id) as any[];
+
+    console.error(`[INFO] Decision stored: ${id} (ns: ${namespace}, supersedes: ${validatedInput.supersedes || 'none'})`);
+
+    return {
+      success: true,
+      decision_id: id,
+      namespace,
+      timestamp: now,
+      has_embedding: hasEmbedding,
+      supersedes: validatedInput.supersedes || null,
+      existing_decisions_count: existingDecisions.length,
+      message: `Decision stored successfully`,
+    };
+  } catch (err) {
+    throw new McpError(
+      ErrorCode.InternalError,
+      `Failed to store decision: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
+
+/**
+ * Handle list_namespaces tool call
+ */
+async function handleListNamespaces(): Promise<Record<string, unknown>> {
+  if (!connections.sqlite) {
+    throw new McpError(ErrorCode.InternalError, "SQLite database not available");
+  }
+
+  try {
+    const namespaces = connections.sqlite.prepare(`
+      SELECT namespace, COUNT(*) as memory_count,
+        COUNT(DISTINCT agent_id) as agent_count,
+        MAX(created_at) as last_activity
+      FROM memories
+      WHERE namespace IS NOT NULL
+      GROUP BY namespace
+      ORDER BY last_activity DESC
+    `).all() as any[];
+
+    return {
+      success: true,
+      namespaces: namespaces.map(ns => ({
+        namespace: ns.namespace,
+        memory_count: ns.memory_count,
+        agent_count: ns.agent_count,
+        last_activity: ns.last_activity,
+      })),
+      count: namespaces.length,
+    };
+  } catch (err) {
+    throw new McpError(
+      ErrorCode.InternalError,
+      `Failed to list namespaces: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
+
+/**
+ * Handle namespace_stats tool call
+ */
+async function handleNamespaceStats(input: unknown): Promise<Record<string, unknown>> {
+  if (!connections.sqlite) {
+    throw new McpError(ErrorCode.InternalError, "SQLite database not available");
+  }
+
+  try {
+    const validatedInput = validateInput(NamespaceStatsInputSchema, input);
+    const namespace = validatedInput.namespace;
+
+    const memoryCount = (connections.sqlite.prepare(
+      "SELECT COUNT(*) as count FROM memories WHERE namespace = ?"
+    ).get(namespace) as any).count;
+
+    const typeBreakdown = connections.sqlite.prepare(
+      "SELECT memory_type, COUNT(*) as count FROM memories WHERE namespace = ? GROUP BY memory_type"
+    ).all(namespace) as any[];
+
+    const entityCount = (connections.sqlite.prepare(
+      "SELECT COUNT(*) as count FROM entities WHERE namespace = ?"
+    ).get(namespace) as any).count;
+
+    const skillCount = (connections.sqlite.prepare(
+      "SELECT COUNT(*) as count FROM skills WHERE namespace = ?"
+    ).get(namespace) as any).count;
+
+    const agents = connections.sqlite.prepare(
+      "SELECT DISTINCT agent_id, agent_role FROM memories WHERE namespace = ? AND agent_id IS NOT NULL"
+    ).all(namespace) as any[];
+
+    const decisionCount = (connections.sqlite.prepare(
+      "SELECT COUNT(*) as count FROM memories WHERE namespace = ? AND memory_type = 'decision'"
+    ).get(namespace) as any).count;
+
+    return {
+      success: true,
+      namespace,
+      memories: memoryCount,
+      memory_type_breakdown: Object.fromEntries(typeBreakdown.map(t => [t.memory_type, t.count])),
+      entities: entityCount,
+      skills: skillCount,
+      decisions: decisionCount,
+      agents: agents.map(a => ({ agent_id: a.agent_id, agent_role: a.agent_role })),
+      agent_count: agents.length,
+    };
+  } catch (err) {
+    throw new McpError(
+      ErrorCode.InternalError,
+      `Failed to get namespace stats: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
+
+/**
  * Process tool calls
  */
 async function processTool(
@@ -1327,6 +1779,14 @@ async function processTool(
       return await handleRecordSkillOutcome(input);
     case "load_skill":
       return await handleLoadSkill(input);
+    case "share_context":
+      return await handleShareContext(input);
+    case "store_decision":
+      return await handleStoreDecision(input);
+    case "list_namespaces":
+      return await handleListNamespaces();
+    case "namespace_stats":
+      return await handleNamespaceStats(input);
     default:
       throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
   }
@@ -1345,7 +1805,7 @@ async function main(): Promise<void> {
   const server = new Server(
     {
       name: "vesper",
-      version: "0.1.0",
+      version: "0.5.0",
     },
     {
       capabilities: {

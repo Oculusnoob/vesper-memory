@@ -48,7 +48,8 @@ describe('Skill Lazy Loading', () => {
         uses_skills TEXT,
         used_by_skills TEXT,
         created_from TEXT,
-        notes TEXT
+        notes TEXT,
+        namespace TEXT DEFAULT 'default'
       );
 
       CREATE INDEX idx_skills_lazy_loading

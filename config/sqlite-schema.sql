@@ -1,6 +1,7 @@
--- AI Memory System v3.0 - SQLite Schema
+-- AI Memory System v3.0 - SQLite Schema (v0.5.0: Multi-Agent Namespace Support)
 -- Core graph structure for semantic memory layer
--- Includes entities, relationships, facts, conflicts, and procedural skills
+-- Includes entities, relationships, facts, conflicts, procedural skills, and memories
+-- All tables support namespace isolation for multi-agent workflows
 
 -- ============================================================================
 -- ENTITIES TABLE
@@ -18,6 +19,9 @@ CREATE TABLE IF NOT EXISTS entities (
   last_accessed TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   access_count INTEGER DEFAULT 1,
 
+  -- Multi-agent namespace isolation (v0.5.0)
+  namespace TEXT NOT NULL DEFAULT 'default',
+
   -- Metadata for tracking
   last_modified TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   is_archived BOOLEAN DEFAULT 0,
@@ -26,6 +30,7 @@ CREATE TABLE IF NOT EXISTS entities (
 
 -- Entity indexes for fast lookup and retrieval
 CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name);
+CREATE INDEX IF NOT EXISTS idx_entities_namespace ON entities(namespace);
 CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(type);
 CREATE INDEX IF NOT EXISTS idx_entities_confidence ON entities(confidence DESC);
 CREATE INDEX IF NOT EXISTS idx_entities_created_at ON entities(created_at DESC);
@@ -57,6 +62,9 @@ CREATE TABLE IF NOT EXISTS relationships (
   -- Access tracking for decay calculation
   access_count INTEGER DEFAULT 1,
 
+  -- Multi-agent namespace isolation (v0.5.0)
+  namespace TEXT NOT NULL DEFAULT 'default',
+
   -- Metadata
   is_archived BOOLEAN DEFAULT 0,
   metadata TEXT,  -- JSON for extensibility
@@ -69,6 +77,7 @@ CREATE TABLE IF NOT EXISTS relationships (
 
 -- Relationship indexes for efficient traversal and decay updates
 CREATE INDEX IF NOT EXISTS idx_relationships_source ON relationships(source_id);
+CREATE INDEX IF NOT EXISTS idx_relationships_namespace ON relationships(namespace);
 CREATE INDEX IF NOT EXISTS idx_relationships_target ON relationships(target_id);
 CREATE INDEX IF NOT EXISTS idx_relationships_type ON relationships(relation_type);
 CREATE INDEX IF NOT EXISTS idx_relationships_strength ON relationships(strength DESC);
@@ -104,6 +113,9 @@ CREATE TABLE IF NOT EXISTS facts (
   notes TEXT,  -- Explanation of why this fact was lowered/disputed
   metadata TEXT,  -- JSON for extensibility
 
+  -- Multi-agent namespace isolation (v0.5.0)
+  namespace TEXT NOT NULL DEFAULT 'default',
+
   -- Foreign key constraint
   FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE,
 
@@ -113,6 +125,7 @@ CREATE TABLE IF NOT EXISTS facts (
 
 -- Fact indexes for retrieval and conflict detection
 CREATE INDEX IF NOT EXISTS idx_facts_entity ON facts(entity_id);
+CREATE INDEX IF NOT EXISTS idx_facts_namespace ON facts(namespace);
 CREATE INDEX IF NOT EXISTS idx_facts_property ON facts(property);
 CREATE INDEX IF NOT EXISTS idx_facts_confidence ON facts(confidence DESC);
 CREATE INDEX IF NOT EXISTS idx_facts_valid_from ON facts(valid_from DESC);
@@ -150,6 +163,9 @@ CREATE TABLE IF NOT EXISTS conflicts (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_reviewed TIMESTAMP,
 
+  -- Multi-agent namespace isolation (v0.5.0)
+  namespace TEXT NOT NULL DEFAULT 'default',
+
   -- Metadata
   metadata TEXT,  -- JSON for extensibility
 
@@ -161,6 +177,7 @@ CREATE TABLE IF NOT EXISTS conflicts (
 
 -- Conflict indexes for efficient detection and resolution
 CREATE INDEX IF NOT EXISTS idx_conflicts_entity ON conflicts(entity_id);
+CREATE INDEX IF NOT EXISTS idx_conflicts_namespace ON conflicts(namespace);
 CREATE INDEX IF NOT EXISTS idx_conflicts_fact_1 ON conflicts(fact_id_1);
 CREATE INDEX IF NOT EXISTS idx_conflicts_fact_2 ON conflicts(fact_id_2);
 CREATE INDEX IF NOT EXISTS idx_conflicts_type ON conflicts(conflict_type);
@@ -202,6 +219,9 @@ CREATE TABLE IF NOT EXISTS skills (
   uses_skills TEXT,  -- JSON array of skill IDs this skill depends on
   used_by_skills TEXT,  -- JSON array of skill IDs that use this skill
 
+  -- Multi-agent namespace isolation (v0.5.0)
+  namespace TEXT NOT NULL DEFAULT 'default',
+
   -- Metadata
   is_archived INTEGER DEFAULT 0,  -- Soft deletion flag
   created_from TEXT,  -- Conversation ID where skill was extracted
@@ -209,13 +229,13 @@ CREATE TABLE IF NOT EXISTS skills (
   last_used TIMESTAMP,
   last_modified TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   version INTEGER DEFAULT 1,
-  is_archived BOOLEAN DEFAULT 0,
   notes TEXT,
   metadata TEXT  -- JSON for extensibility
 );
 
 -- Skill indexes for efficient retrieval
 CREATE INDEX IF NOT EXISTS idx_skills_name ON skills(name);
+CREATE INDEX IF NOT EXISTS idx_skills_namespace ON skills(namespace);
 CREATE INDEX IF NOT EXISTS idx_skills_category ON skills(category);
 CREATE INDEX IF NOT EXISTS idx_skills_created_at ON skills(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_success_rate ON skills(success_count, failure_count);
@@ -236,6 +256,37 @@ CREATE INDEX IF NOT EXISTS idx_skills_category_quality
 CREATE INDEX IF NOT EXISTS idx_skills_reliability
   ON skills(avg_user_satisfaction DESC, success_count DESC)
   WHERE is_archived = 0;
+
+-- ============================================================================
+-- MEMORIES TABLE
+-- Core memory storage with namespace isolation and agent attribution
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS memories (
+  id TEXT PRIMARY KEY,
+  content TEXT NOT NULL,
+  memory_type TEXT NOT NULL,  -- 'episodic', 'semantic', 'procedural', 'decision'
+  embedding TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  importance REAL DEFAULT 0.5,
+  access_count INTEGER DEFAULT 0,
+  last_accessed TIMESTAMP,
+  metadata TEXT,  -- JSON for extensibility
+
+  -- Multi-agent namespace isolation (v0.5.0)
+  namespace TEXT NOT NULL DEFAULT 'default',
+  agent_id TEXT,       -- Which agent stored this memory
+  agent_role TEXT,     -- Role of the agent (e.g., 'orchestrator', 'researcher')
+  task_id TEXT         -- Task this memory is associated with
+);
+
+-- Memory indexes
+CREATE INDEX IF NOT EXISTS idx_memories_namespace ON memories(namespace);
+CREATE INDEX IF NOT EXISTS idx_memories_type ON memories(memory_type);
+CREATE INDEX IF NOT EXISTS idx_memories_created_at ON memories(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memories_agent ON memories(namespace, agent_id);
+CREATE INDEX IF NOT EXISTS idx_memories_task ON memories(namespace, task_id);
 
 -- ============================================================================
 -- CONSOLIDATION METADATA TABLE

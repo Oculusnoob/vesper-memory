@@ -63,6 +63,7 @@ export interface RoutingContext {
   userId: string;
   conversationId: string;
   timestamp: Date;
+  namespace?: string;
   metadata?: Record<string, unknown>;
 }
 

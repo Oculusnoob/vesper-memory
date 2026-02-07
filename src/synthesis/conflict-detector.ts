@@ -3,6 +3,7 @@
  *
  * Detect contradictions, temporal impossibilities, preference shifts.
  * Flag but never auto-resolve - honesty over guessing.
+ * v0.5.0: Added namespace parameter for multi-agent isolation.
  */
 
 import Database from 'better-sqlite3';
@@ -24,38 +25,36 @@ export class ConflictDetector {
   }
 
   /**
-   * Detect all types of conflicts
+   * Detect all types of conflicts within a namespace
    */
-  detectAll(): Conflict[] {
+  detectAll(namespace: string = 'default'): Conflict[] {
     const conflicts: Conflict[] = [];
 
     // Check direct contradictions first (more specific than temporal overlaps)
-    conflicts.push(...this.detectDirectContradictions());
-    conflicts.push(...this.detectTemporalConflicts());
-    conflicts.push(...this.detectPreferenceShifts());
+    conflicts.push(...this.detectDirectContradictions(namespace));
+    conflicts.push(...this.detectTemporalConflicts(namespace));
+    conflicts.push(...this.detectPreferenceShifts(namespace));
 
     return conflicts;
   }
 
   /**
    * Temporal impossibilities
-   * Example: "worked at A in 2020" vs "worked at B in 2020"
    */
-  private detectTemporalConflicts(): Conflict[] {
+  private detectTemporalConflicts(namespace: string): Conflict[] {
     const conflicts: Conflict[] = [];
 
-    // Detect temporal overlaps including open-ended periods
-    // Note: Direct contradictions with same valid_from are handled separately
     const results = this.db.prepare(`
       SELECT f1.*, f2.id as f2_id, f2.value as f2_value, f2.valid_from as f2_valid_from
       FROM facts f1
       JOIN facts f2 ON f1.entity_id = f2.entity_id AND f1.property = f2.property
       WHERE f1.id < f2.id
         AND f1.value != f2.value
+        AND f1.namespace = ? AND f2.namespace = ?
         AND f1.valid_from <= COALESCE(f2.valid_until, '9999-12-31')
         AND COALESCE(f1.valid_until, '9999-12-31') >= f2.valid_from
         AND NOT (f1.valid_until IS NULL AND f2.valid_until IS NULL AND f1.valid_from = f2.valid_from)
-    `).all() as any[];
+    `).all(namespace, namespace) as any[];
 
     for (const row of results) {
       conflicts.push({
@@ -73,12 +72,10 @@ export class ConflictDetector {
 
   /**
    * Direct contradictions
-   * Example: "allergic to peanuts" vs "loves peanut butter"
    */
-  private detectDirectContradictions(): Conflict[] {
+  private detectDirectContradictions(namespace: string): Conflict[] {
     const conflicts: Conflict[] = [];
 
-    // Direct contradictions: both indefinite AND same start date
     const results = this.db.prepare(`
       SELECT f1.*, f2.id as f2_id, f2.value as f2_value
       FROM facts f1
@@ -89,7 +86,8 @@ export class ConflictDetector {
         AND f1.valid_until IS NULL
         AND f2.valid_until IS NULL
         AND f1.valid_from = f2.valid_from
-    `).all() as any[];
+        AND f1.namespace = ? AND f2.namespace = ?
+    `).all(namespace, namespace) as any[];
 
     for (const row of results) {
       conflicts.push({
@@ -107,9 +105,8 @@ export class ConflictDetector {
 
   /**
    * Preference changes over time
-   * Example: "prefers Python" (old) vs "prefers Rust" (recent)
    */
-  private detectPreferenceShifts(): Conflict[] {
+  private detectPreferenceShifts(namespace: string): Conflict[] {
     const conflicts: Conflict[] = [];
 
     const results = this.db.prepare(`
@@ -119,7 +116,8 @@ export class ConflictDetector {
       WHERE e1.id < e2.id
         AND e1.name != e2.name
         AND e1.description = e2.description
-    `).all() as any[];
+        AND e1.namespace = ? AND e2.namespace = ?
+    `).all(namespace, namespace) as any[];
 
     for (const row of results) {
       const timeDiff = new Date(row.e2_created).getTime() - new Date(row.created_at).getTime();
@@ -143,10 +141,10 @@ export class ConflictDetector {
   /**
    * Store detected conflict
    */
-  storeConflict(conflict: Conflict): void {
+  storeConflict(conflict: Conflict, namespace: string = 'default'): void {
     this.db.prepare(`
-      INSERT INTO conflicts (id, fact_id_1, fact_id_2, conflict_type, description, severity, resolution_status)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO conflicts (id, fact_id_1, fact_id_2, conflict_type, description, severity, resolution_status, namespace)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       conflict.id,
       conflict.factId1,
@@ -154,7 +152,8 @@ export class ConflictDetector {
       conflict.conflictType,
       conflict.description,
       conflict.severity,
-      'flagged'
+      'flagged',
+      namespace
     );
 
     // Lower confidence on both facts
