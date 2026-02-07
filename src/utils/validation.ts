@@ -209,6 +209,23 @@ export const LoadSkillInputSchema = z.object({
 
 export type LoadSkillInput = z.infer<typeof LoadSkillInputSchema>;
 
+/**
+ * Schema for delete_memory tool input
+ *
+ * Enforces:
+ * - memory_id is a required UUID string
+ * - Namespace for multi-agent isolation
+ */
+export const DeleteMemoryInputSchema = z.object({
+  memory_id: z.string()
+    .min(1, "memory_id cannot be empty")
+    .max(255, "memory_id cannot exceed 255 characters"),
+
+  namespace: NamespaceSchema.optional().default("default"),
+});
+
+export type DeleteMemoryInput = z.infer<typeof DeleteMemoryInputSchema>;
+
 // ============================================================================
 // New Tool Schemas for v0.5.0
 // ============================================================================

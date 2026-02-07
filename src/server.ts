@@ -28,6 +28,7 @@ import {
   RetrieveMemoryInputSchema,
   ListRecentInputSchema,
   GetStatsInputSchema,
+  DeleteMemoryInputSchema,
   RecordSkillOutcomeInputSchema,
   LoadSkillInputSchema,
   ShareContextInputSchema,
@@ -174,6 +175,22 @@ const TOOLS = [
         },
         namespace: NAMESPACE_PROP,
       },
+    },
+  },
+  {
+    name: "delete_memory",
+    description:
+      "Delete a memory entry by ID. Removes from SQLite, Qdrant, Redis, and cleans up orphaned facts.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        memory_id: {
+          type: "string",
+          description: "The ID of the memory to delete",
+        },
+        namespace: NAMESPACE_PROP,
+      },
+      required: ["memory_id"],
     },
   },
   {
@@ -1244,6 +1261,108 @@ async function handleGetStats(input: unknown): Promise<Record<string, unknown>> 
 }
 
 /**
+ * Handle delete_memory tool call
+ */
+async function handleDeleteMemory(input: unknown): Promise<Record<string, unknown>> {
+  if (!connections.sqlite) {
+    throw new McpError(
+      ErrorCode.InternalError,
+      "SQLite database not available"
+    );
+  }
+
+  try {
+    const validatedInput = validateInput(DeleteMemoryInputSchema, input);
+    const namespace = validatedInput.namespace || 'default';
+
+    // Verify memory exists in SQLite
+    const existing = connections.sqlite.prepare(
+      "SELECT id, content, memory_type, created_at FROM memories WHERE id = ? AND namespace = ?"
+    ).get(validatedInput.memory_id, namespace) as {
+      id: string;
+      content: string;
+      memory_type: string;
+      created_at: number;
+    } | undefined;
+
+    if (!existing) {
+      return {
+        success: false,
+        message: `Memory not found: ${validatedInput.memory_id} in namespace '${namespace}'`,
+      };
+    }
+
+    // Delete from SQLite memories table
+    connections.sqlite.prepare(
+      "DELETE FROM memories WHERE id = ? AND namespace = ?"
+    ).run(validatedInput.memory_id, namespace);
+
+    // Delete from Qdrant (best-effort)
+    if (connections.hybridSearch) {
+      try {
+        await connections.hybridSearch.deleteMemory(validatedInput.memory_id);
+      } catch (err) {
+        console.error(
+          "[WARN] Failed to delete from Qdrant (continuing):",
+          err instanceof Error ? err.message : String(err)
+        );
+      }
+    }
+
+    // Delete from Redis (best-effort)
+    if (connections.redis) {
+      try {
+        // Delete the individual working memory key
+        await connections.redis.del(`${namespace}:working:${validatedInput.memory_id}`);
+        // Remove from the recent list
+        await connections.redis.lrem(`${namespace}:working:recent`, 0, validatedInput.memory_id);
+      } catch (err) {
+        console.error(
+          "[WARN] Failed to delete from Redis (continuing):",
+          err instanceof Error ? err.message : String(err)
+        );
+      }
+    }
+
+    // Clean up orphaned facts where source_conversation = memory_id
+    try {
+      connections.sqlite.prepare(
+        "DELETE FROM facts WHERE source_conversation = ? AND namespace = ?"
+      ).run(validatedInput.memory_id, namespace);
+    } catch (err) {
+      console.error(
+        "[WARN] Failed to clean up orphaned facts (continuing):",
+        err instanceof Error ? err.message : String(err)
+      );
+    }
+
+    console.error(
+      `[INFO] Memory deleted: ${validatedInput.memory_id} (type: ${existing.memory_type}, ns: ${namespace})`
+    );
+
+    return {
+      success: true,
+      deleted: {
+        id: existing.id,
+        content: existing.content,
+        memory_type: existing.memory_type,
+        created_at: existing.created_at,
+      },
+      namespace,
+      message: `Memory deleted successfully`,
+    };
+  } catch (err) {
+    if (err instanceof McpError) {
+      throw err;
+    }
+    throw new McpError(
+      ErrorCode.InternalError,
+      `Failed to delete memory: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
+
+/**
  * Handle vesper_enable tool call
  */
 async function handleVesperEnable(): Promise<Record<string, unknown>> {
@@ -1775,6 +1894,8 @@ async function processTool(
       return await handleListRecent(input);
     case "get_stats":
       return await handleGetStats(input);
+    case "delete_memory":
+      return await handleDeleteMemory(input);
     case "record_skill_outcome":
       return await handleRecordSkillOutcome(input);
     case "load_skill":

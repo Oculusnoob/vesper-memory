@@ -21,6 +21,7 @@ const EXPECTED_TOOLS = [
   'retrieve_memory',
   'list_recent',
   'get_stats',
+  'delete_memory',  // Memory deletion
   'vesper_enable',
   'vesper_disable',
   'vesper_status',
@@ -51,6 +52,10 @@ const EXPECTED_TOOL_SCHEMAS = {
   get_stats: {
     required: [],
     properties: ['detailed'],
+  },
+  delete_memory: {
+    required: ['memory_id'],
+    properties: ['memory_id', 'namespace'],
   },
   vesper_enable: {
     required: [],
@@ -188,28 +193,29 @@ describe('MCP Server Tools Discovery', () => {
       // Verify tools are in the expected order for predictable discovery
       const toolNames = TOOLS.map((t) => t.name);
 
-      // First 4 core memory tools
+      // First 4 core memory tools + delete
       expect(toolNames[0]).toBe('store_memory');
       expect(toolNames[1]).toBe('retrieve_memory');
       expect(toolNames[2]).toBe('list_recent');
       expect(toolNames[3]).toBe('get_stats');
+      expect(toolNames[4]).toBe('delete_memory');
 
       // Toggle tools
-      expect(toolNames[4]).toBe('vesper_enable');
-      expect(toolNames[5]).toBe('vesper_disable');
-      expect(toolNames[6]).toBe('vesper_status');
+      expect(toolNames[5]).toBe('vesper_enable');
+      expect(toolNames[6]).toBe('vesper_disable');
+      expect(toolNames[7]).toBe('vesper_status');
 
       // Skill feedback tool
-      expect(toolNames[7]).toBe('record_skill_outcome');
+      expect(toolNames[8]).toBe('record_skill_outcome');
 
       // Lazy loading tool
-      expect(toolNames[8]).toBe('load_skill');
+      expect(toolNames[9]).toBe('load_skill');
 
       // Multi-agent namespace tools
-      expect(toolNames[9]).toBe('share_context');
-      expect(toolNames[10]).toBe('store_decision');
-      expect(toolNames[11]).toBe('list_namespaces');
-      expect(toolNames[12]).toBe('namespace_stats');
+      expect(toolNames[10]).toBe('share_context');
+      expect(toolNames[11]).toBe('store_decision');
+      expect(toolNames[12]).toBe('list_namespaces');
+      expect(toolNames[13]).toBe('namespace_stats');
     });
   });
 });
@@ -451,11 +457,26 @@ describe('Environment Independence', () => {
     // Count tool definitions
     const toolMatches = source.match(/{\s*name:\s*["'][^"']+["'],\s*description:/g);
     expect(toolMatches).toBeDefined();
-    expect(toolMatches!.length).toBe(13);  // Updated for namespace tools
+    expect(toolMatches!.length).toBe(14);  // Updated for delete_memory tool
   });
 });
 
 describe('Tool Handler Registration', () => {
+  it('should have handler case for delete_memory in processTool', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    const srcPath = path.join(process.cwd(), 'src', 'server.ts');
+    const source = fs.readFileSync(srcPath, 'utf-8');
+
+    const processToolMatch = source.match(/async\s+function\s+processTool[\s\S]*?\/\/ Process memory tools[\s\S]*?switch\s*\(name\)\s*\{([\s\S]*?default:)/);
+    expect(processToolMatch).toBeDefined();
+
+    const switchBlock = processToolMatch![1];
+    expect(switchBlock).toContain('case "delete_memory"');
+    expect(switchBlock).toContain('handleDeleteMemory');
+  });
+
   it('should have handler case for record_skill_outcome in processTool', async () => {
     const fs = await import('fs');
     const path = await import('path');
