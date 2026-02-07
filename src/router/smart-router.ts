@@ -11,27 +11,38 @@
 import { WorkingMemoryLayer } from '../memory-layers/working-memory.js';
 import { SemanticMemoryLayer } from '../memory-layers/semantic-memory.js';
 import { SkillLibrary } from '../memory-layers/skill-library.js';
+import { HybridSearchEngine } from '../retrieval/hybrid-search.js';
+import { EmbeddingClient } from '../embeddings/client.js';
 
 /**
- * Module-level dependency - set via init()
+ * Module-level dependencies - set via init()
  */
 let workingMemoryLayer: WorkingMemoryLayer | null = null;
-
-/**
- * Module-level semantic memory dependency for preference queries
- */
 let semanticMemoryLayer: SemanticMemoryLayer | null = null;
-
-/**
- * Module-level skill library dependency for skill queries
- */
 let skillLibraryLayer: SkillLibrary | null = null;
+let hybridSearchEngine: HybridSearchEngine | null = null;
+let embeddingClientInstance: EmbeddingClient | null = null;
 
 /**
- * Initialize the router with dependencies
+ * Module-level SQLite dependency for direct queries
  */
-export function init(deps: { workingMemory?: WorkingMemoryLayer }): void {
+let sqliteDb: any = null;
+
+/**
+ * Initialize the router with all dependencies
+ */
+export function init(deps: {
+  workingMemory?: WorkingMemoryLayer;
+  semanticMemory?: SemanticMemoryLayer;
+  hybridSearch?: HybridSearchEngine;
+  embeddingClient?: EmbeddingClient;
+  sqlite?: any;
+}): void {
   workingMemoryLayer = deps.workingMemory || null;
+  if (deps.semanticMemory) semanticMemoryLayer = deps.semanticMemory;
+  if (deps.hybridSearch) hybridSearchEngine = deps.hybridSearch;
+  if (deps.embeddingClient) embeddingClientInstance = deps.embeddingClient;
+  if (deps.sqlite) sqliteDb = deps.sqlite;
 }
 
 /**
@@ -321,17 +332,66 @@ async function checkWorkingMemory(
  */
 async function handleFactualQuery(
   query: string,
-  _context: RoutingContext
+  context: RoutingContext
 ): Promise<MemoryResult[]> {
   console.debug(`[Router] Handling factual query: "${query}"`);
 
-  // TODO: Implement factual query handler
-  // 1. Extract entity name from query (using NER or simple heuristics)
-  // 2. Lookup entity in semantic memory
-  // 3. Retrieve related facts and properties
-  // 4. Return with confidence scores
+  const namespace = context.namespace || 'default';
 
-  return [];
+  // Step 1: Extract entity name from query
+  const entityName = extractEntityName(query);
+
+  if (entityName && semanticMemoryLayer) {
+    try {
+      const entity = semanticMemoryLayer.getEntity(entityName, namespace);
+
+      if (entity) {
+        const graphResults = semanticMemoryLayer.personalizedPageRankWithFacts(
+          entity.id, 2, namespace
+        );
+
+        const results: MemoryResult[] = [];
+
+        results.push({
+          id: entity.id,
+          source: "semantic" as const,
+          content: `${entity.name} (${entity.type}): ${entity.description || 'No description'}`,
+          similarity: 1.0,
+          timestamp: new Date((entity as any).last_accessed || (entity as any).created_at || Date.now()),
+          confidence: entity.confidence,
+        });
+
+        for (const fact of graphResults.facts.slice(0, 5)) {
+          results.push({
+            id: fact.id,
+            source: "semantic" as const,
+            content: `${fact.property}: ${fact.value}`,
+            similarity: fact.confidence,
+            timestamp: new Date(fact.valid_from || Date.now()),
+            confidence: fact.confidence,
+          });
+        }
+
+        for (const relEntity of graphResults.entities.slice(1, 4)) {
+          results.push({
+            id: relEntity.id,
+            source: "semantic" as const,
+            content: `${relEntity.name} (${relEntity.type}): ${relEntity.description || 'Related entity'}`,
+            similarity: relEntity.relevanceScore,
+            timestamp: new Date((relEntity as any).last_accessed || (relEntity as any).created_at || Date.now()),
+            confidence: relEntity.confidence,
+          });
+        }
+
+        if (results.length > 0) return results;
+      }
+    } catch (err) {
+      console.error(`[Router] Entity lookup failed for "${entityName}":`, err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  // Fallback: delegate to semantic search
+  return fallbackToSemanticSearch(query, namespace, 5);
 }
 
 /**
@@ -368,17 +428,62 @@ async function handlePreferenceQuery(
  */
 async function handleProjectQuery(
   query: string,
-  _context: RoutingContext
+  context: RoutingContext
 ): Promise<MemoryResult[]> {
   console.debug(`[Router] Handling project query: "${query}"`);
 
-  // TODO: Implement project query handler
-  // 1. Extract project entity name from query
-  // 2. Lookup project entity in semantic memory
-  // 3. Run HippoRAG personalized PageRank from project node (depth=2)
-  // 4. Return connected entities and relationships
+  const namespace = context.namespace || 'default';
 
-  return [];
+  if (!semanticMemoryLayer) {
+    return fallbackToSemanticSearch(query, namespace, 5);
+  }
+
+  // Extract project/entity name from query
+  const entityName = extractEntityName(query);
+
+  if (entityName) {
+    try {
+      const entity = semanticMemoryLayer.getEntity(entityName, namespace);
+
+      if (entity) {
+        const graphResults = semanticMemoryLayer.personalizedPageRankWithFacts(
+          entity.id, 2, namespace
+        );
+
+        const results: MemoryResult[] = [];
+
+        for (const e of graphResults.entities) {
+          results.push({
+            id: e.id,
+            source: "semantic" as const,
+            content: `${e.name} (${e.type}): ${e.description || ''}`,
+            similarity: e.relevanceScore,
+            timestamp: new Date((e as any).last_accessed || (e as any).created_at || Date.now()),
+            confidence: e.confidence,
+          });
+        }
+
+        if (graphResults.chains) {
+          for (const chain of graphResults.chains) {
+            results.push({
+              id: chain.targetId,
+              source: "semantic" as const,
+              content: `[Chain] ${entity.name} -> ${chain.intermediaries.join(' -> ')} -> ${chain.targetName}`,
+              similarity: chain.totalScore,
+              timestamp: new Date(),
+            });
+          }
+        }
+
+        if (results.length > 0) return results;
+      }
+    } catch (err) {
+      console.error(`[Router] Project graph traversal failed for "${entityName}":`, err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  // Fallback: search memories with project-related content
+  return fallbackToSemanticSearch(query, namespace, 5);
 }
 
 /**
@@ -395,17 +500,42 @@ async function handleProjectQuery(
  */
 async function handleTemporalQuery(
   query: string,
-  _context: RoutingContext
+  context: RoutingContext
 ): Promise<MemoryResult[]> {
   console.debug(`[Router] Handling temporal query: "${query}"`);
 
-  // TODO: Implement temporal query handler
-  // 1. Parse temporal references from query
-  // 2. Convert to time range (start_date, end_date)
-  // 3. Query semantic memory for memories in that range
-  // 4. Apply temporal decay based on specificity
+  const namespace = context.namespace || 'default';
 
-  return [];
+  // Step 1: Parse temporal references
+  const timeRange = parseTimeRange(query);
+
+  if (timeRange && sqliteDb) {
+    // Step 2: Query memories within time range
+    const startMs = timeRange.startDate.getTime();
+    const endMs = timeRange.endDate.getTime();
+
+    const rows = sqliteDb.prepare(`
+      SELECT id, content, memory_type, created_at, agent_id, task_id
+      FROM memories
+      WHERE namespace = ? AND created_at >= ? AND created_at <= ?
+      ORDER BY created_at DESC
+      LIMIT 10
+    `).all(namespace, startMs, endMs) as any[];
+
+    if (rows.length > 0) {
+      return rows.map((row: any) => ({
+        id: row.id,
+        source: "semantic" as const,
+        content: row.content,
+        similarity: 0.9,
+        timestamp: new Date(row.created_at),
+        confidence: 0.9,
+      }));
+    }
+  }
+
+  // Fallback to semantic search
+  return fallbackToSemanticSearch(query, namespace, 5);
 }
 
 /**
@@ -447,33 +577,14 @@ async function handleSkillQuery(
  */
 async function handleComplexQuery(
   query: string,
-  _context: RoutingContext
+  context: RoutingContext
 ): Promise<MemoryResult[]> {
   console.debug(`[Router] Handling complex query with hybrid search: "${query}"`);
 
-  // TODO: Implement hybrid search
-  // 1. Embed query in multiple representations:
-  //    - Dense: BGE-large embeddings
-  //    - Sparse: SPLADE++ sparse vectors
-  //    - Keyword: BM25 tokenization
-  //
-  // 2. Parallel search in Qdrant:
-  //    - Dense similarity search (limit: 20)
-  //    - Sparse similarity search (limit: 20)
-  //    - BM25 full-text search (limit: 20)
-  //
-  // 3. Reciprocal Rank Fusion:
-  //    - Combine ranked lists from three searches
-  //    - Weight scores using RRF formula with k=60
-  //
-  // 4. Light reranking:
-  //    - Use cross-encoder (not ColBERT for speed)
-  //    - Rerank only top-10 results
-  //    - Adds ~20ms but significant accuracy gain
-  //
-  // 5. Return top-5 after reranking
+  const namespace = context.namespace || 'default';
 
-  return [];
+  // Delegate to semantic search (dense vectors via Qdrant + RRF)
+  return fallbackToSemanticSearch(query, namespace, 5);
 }
 
 /**
@@ -482,9 +593,27 @@ async function handleComplexQuery(
  * Implementation stub for entity extraction
  * Will later integrate with NER or simple heuristics
  */
-export function extractEntityName(_query: string): string | null {
-  // TODO: Implement entity extraction
-  // Current: just return null
+export function extractEntityName(query: string): string | null {
+  const normalizedQuery = query.toLowerCase().trim();
+
+  // Pattern: "What is X?", "Who is X?", "Where is X?"
+  const whMatch = normalizedQuery.match(/\b(?:what|who|where)\s+(?:is|was|are|were)\s+(.+)$/i);
+  if (whMatch && whMatch[1]) {
+    return whMatch[1].trim().replace(/[\?\.\!]+$/, '').replace(/^(the|a|an)\s+/i, '').trim();
+  }
+
+  // Pattern: "Tell me about X", "Info on X"
+  const aboutMatch = normalizedQuery.match(/\b(?:about|regarding|on)\s+(.+)$/i);
+  if (aboutMatch && aboutMatch[1]) {
+    return aboutMatch[1].trim().replace(/[\?\.\!]+$/, '').replace(/^(the|a|an)\s+/i, '').trim();
+  }
+
+  // Pattern: "X project", "X decision", "working on X"
+  const projectMatch = normalizedQuery.match(/\b(?:working on|decided about|building)\s+(.+)$/i);
+  if (projectMatch && projectMatch[1]) {
+    return projectMatch[1].trim().replace(/[\?\.\!]+$/, '').replace(/^(the|a|an)\s+/i, '').trim();
+  }
+
   return null;
 }
 
@@ -512,9 +641,49 @@ export interface TimeRange {
   endDate: Date;
 }
 
-export function parseTimeRange(_query: string): TimeRange | null {
-  // TODO: Implement temporal reference parsing
-  // Current: just return null
+export function parseTimeRange(query: string): TimeRange | null {
+  const normalizedQuery = query.toLowerCase().trim();
+  const now = new Date();
+  const endDate = new Date(now);
+
+  // "yesterday"
+  if (/\byesterday\b/.test(normalizedQuery)) {
+    const startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - 1);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setDate(endDate.getDate() - 1);
+    endDate.setHours(23, 59, 59, 999);
+    return { startDate, endDate };
+  }
+
+  // "last week"
+  if (/\blast\s+week\b/.test(normalizedQuery)) {
+    const startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - 7);
+    return { startDate, endDate: now };
+  }
+
+  // "last month"
+  if (/\blast\s+month\b/.test(normalizedQuery)) {
+    const startDate = new Date(now);
+    startDate.setMonth(startDate.getMonth() - 1);
+    return { startDate, endDate: now };
+  }
+
+  // "last year"
+  if (/\blast\s+year\b/.test(normalizedQuery)) {
+    const startDate = new Date(now);
+    startDate.setFullYear(startDate.getFullYear() - 1);
+    return { startDate, endDate: now };
+  }
+
+  // "recently" / "last time" / "earlier" - last 3 days
+  if (/\b(recently|last\s+time|earlier)\b/.test(normalizedQuery)) {
+    const startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - 3);
+    return { startDate, endDate: now };
+  }
+
   return null;
 }
 
@@ -561,6 +730,62 @@ export function extractPreferenceDomain(query: string): string | null {
   }
 
   return null;
+}
+
+/**
+ * Fallback to dense semantic search via embedding + Qdrant
+ *
+ * Used when specialized handlers can't find results.
+ */
+async function fallbackToSemanticSearch(
+  query: string,
+  namespace: string,
+  maxResults: number
+): Promise<MemoryResult[]> {
+  if (!embeddingClientInstance || !hybridSearchEngine) {
+    // Last resort: SQL text search
+    if (sqliteDb) {
+      const rows = sqliteDb.prepare(
+        "SELECT id, content, memory_type, created_at FROM memories WHERE namespace = ? ORDER BY created_at DESC LIMIT ?"
+      ).all(namespace, maxResults) as any[];
+
+      return rows.map((row: any) => ({
+        id: row.id,
+        source: "semantic" as const,
+        content: row.content,
+        similarity: 0.5,
+        timestamp: new Date(row.created_at),
+      }));
+    }
+    return [];
+  }
+
+  try {
+    const queryEmbedding = await embeddingClientInstance.embed(query);
+    const qdrantFilter = {
+      must: [{ key: "namespace", match: { value: namespace } }],
+    };
+
+    let searchResults = await hybridSearchEngine.hybridSearch(
+      queryEmbedding, maxResults, qdrantFilter
+    );
+
+    // Backward compat: retry without filter for default namespace
+    if (searchResults.length === 0 && namespace === 'default') {
+      searchResults = await hybridSearchEngine.hybridSearch(queryEmbedding, maxResults);
+    }
+
+    return searchResults.map((r) => ({
+      id: r.id,
+      source: "hybrid" as const,
+      content: (r.payload?.content as string) || '',
+      similarity: r.fusedScore,
+      timestamp: new Date((r.payload?.created_at as number) || Date.now()),
+    }));
+  } catch (err) {
+    console.error(`[Router] Semantic search fallback failed:`, err);
+    return [];
+  }
 }
 
 /**

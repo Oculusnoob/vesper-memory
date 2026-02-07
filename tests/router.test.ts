@@ -299,8 +299,18 @@ describe("Query Routing (retrieve)", () => {
 
 describe("Helper functions", () => {
   describe("extractEntityName", () => {
-    it("should return null for now (stub implementation)", () => {
+    it("should extract entity name from 'What is X?' queries", () => {
       const result = extractEntityName("What is the MetricPilot project?");
+      expect(result).toBe("metricpilot project");
+    });
+
+    it("should extract entity from 'Who is X?' queries", () => {
+      const result = extractEntityName("Who is John?");
+      expect(result).toBe("john");
+    });
+
+    it("should return null for unrecognized patterns", () => {
+      const result = extractEntityName("hello world");
       expect(result).toBeNull();
     });
   });
@@ -343,8 +353,33 @@ describe("Helper functions", () => {
   });
 
   describe("parseTimeRange", () => {
-    it("should return null for now (stub implementation)", () => {
+    it("should parse 'last week' into a time range", () => {
       const result = parseTimeRange("What happened last week?");
+      expect(result).not.toBeNull();
+      expect(result!.startDate).toBeInstanceOf(Date);
+      expect(result!.endDate).toBeInstanceOf(Date);
+      const daysDiff = (result!.endDate.getTime() - result!.startDate.getTime()) / (1000 * 60 * 60 * 24);
+      expect(daysDiff).toBeGreaterThanOrEqual(6);
+      expect(daysDiff).toBeLessThanOrEqual(8);
+    });
+
+    it("should parse 'yesterday'", () => {
+      const result = parseTimeRange("What happened yesterday?");
+      expect(result).not.toBeNull();
+    });
+
+    it("should parse 'last month'", () => {
+      const result = parseTimeRange("What did we do last month?");
+      expect(result).not.toBeNull();
+    });
+
+    it("should parse 'recently'", () => {
+      const result = parseTimeRange("What happened recently?");
+      expect(result).not.toBeNull();
+    });
+
+    it("should return null for non-temporal queries", () => {
+      const result = parseTimeRange("What is Redis?");
       expect(result).toBeNull();
     });
   });

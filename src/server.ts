@@ -538,9 +538,13 @@ async function initializeConnections(): Promise<void> {
       console.error("[WARN] Consolidation pipeline not initialized (missing dependencies)");
     }
 
-    // Initialize Smart Router with working memory and skill library
+    // Initialize Smart Router with all available dependencies
     SmartRouter.init({
       workingMemory: connections.workingMemory,
+      semanticMemory: connections.semanticMemory,
+      hybridSearch: connections.hybridSearch,
+      embeddingClient: connections.embeddingClient,
+      sqlite: connections.sqlite,
     });
 
     // Initialize skill handler in router
@@ -1001,6 +1005,53 @@ async function handleRetrieveMemory(input: unknown): Promise<Record<string, unkn
     const validatedInput = validateInput(RetrieveMemoryInputSchema, input);
     const namespace = validatedInput.namespace || 'default';
     const maxResults = validatedInput.max_results || 5;
+
+    // Try SmartRouter first (unless a specific routing_strategy is requested)
+    if (!validatedInput.routing_strategy) {
+      try {
+        const routerContext: SmartRouter.RoutingContext = {
+          userId: 'default',
+          conversationId: 'mcp',
+          timestamp: new Date(),
+          namespace,
+        };
+
+        const routerResults = await SmartRouter.retrieve(validatedInput.query, routerContext);
+
+        if (routerResults.length > 0) {
+          const classification = SmartRouter.classifyQuery(validatedInput.query);
+          console.error(
+            `[INFO] SmartRouter hit: query="${validatedInput.query}", type=${classification.type}, ns=${namespace}, results=${routerResults.length}`
+          );
+
+          return {
+            success: true,
+            query: validatedInput.query,
+            namespace,
+            routing_strategy: classification.type,
+            results: routerResults.map((r) => ({
+              id: r.id,
+              content: r.content,
+              memory_type: r.source,
+              created_at: r.timestamp instanceof Date ? r.timestamp.getTime() : r.timestamp,
+              similarity_score: r.similarity,
+              confidence: r.confidence,
+            })),
+            count: routerResults.length,
+          };
+        }
+
+        // Router returned empty - fall through to direct search
+        console.error(
+          `[INFO] SmartRouter returned empty, falling back to direct search for: "${validatedInput.query}"`
+        );
+      } catch (err) {
+        console.error(
+          "[WARN] SmartRouter failed, falling back to direct search:",
+          err instanceof Error ? err.message : String(err)
+        );
+      }
+    }
 
     // Build Qdrant filter for namespace
     const qdrantFilter: Record<string, unknown> = {
