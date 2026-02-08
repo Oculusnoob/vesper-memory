@@ -2,7 +2,6 @@
   "name": "vesper-memory",
   "version": "0.5.2",
   "description": "AI memory system for Claude Code - Three-layer architecture with semantic search, knowledge graphs, and intelligent retrieval",
-  "readme": "README.md",
   "type": "module",
   "engines": {
     "node": ">=20.0.0"
