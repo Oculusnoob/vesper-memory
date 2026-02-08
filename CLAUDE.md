@@ -333,7 +333,7 @@ LOG_LEVEL=info
 
 ## Design Principles
 
-### v0.5.2 Pragmatic Approach
+### v0.5.4 Pragmatic Approach
 
 **Core Philosophy**:
 1. **Simple > Complex** - Pragmatic solutions over theoretical perfection

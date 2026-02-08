@@ -14,10 +14,14 @@ Simple, local memory system for Claude Code. No authentication, no complexity - 
 
 ---
 
-## ✨ What's New in v0.5.2
+## ✨ What's New in v0.5.4
 
-**Delete Memory Tool**
-- New `delete_memory` MCP tool to remove stored memories by ID
+**`vesper init` Command**
+- New `vesper init` command to install Claude Code rules into any project
+- Automatically sets up `.claude/rules/` with Vesper memory guidelines
+
+**Delete Memory Tool** (v0.5.2)
+- `delete_memory` MCP tool to remove stored memories by ID
 - Cleans up across all layers (SQLite, Qdrant, Redis) and orphaned facts
 - 14 MCP tools total
 
@@ -103,7 +107,7 @@ Vesper has been scientifically validated with comprehensive benchmarks measuring
 | **P99 Latency** | 8.2ms | 1.2ms | ✅ **85.4% faster** |
 | **Memory Hit Rate** | 0% | 100% | ✅ **Perfect recall** |
 
-**What this means:** Vesper v0.5.2 provides perfect memory recall with SmartRouter intelligently routing queries across 6 specialized handlers. Lazy loading reduces token usage by 90%, while the LRU embedding cache eliminates redundant embedding generation. Working memory provides sub-millisecond fast path for recent queries. All latency targets exceeded: P95 of 0.6ms is **99.7% better** than the 200ms target.
+**What this means:** Vesper v0.5.4 provides perfect memory recall with SmartRouter intelligently routing queries across 6 specialized handlers. Lazy loading reduces token usage by 90%, while the LRU embedding cache eliminates redundant embedding generation. Working memory provides sub-millisecond fast path for recent queries. All latency targets exceeded: P95 of 0.6ms is **99.7% better** than the 200ms target.
 
 ### Benchmark Methodology
 
@@ -477,7 +481,7 @@ Query with smart routing and semantic search.
 - `task_id` (optional): Filter to memories from a specific task
 - `exclude_agent` (optional): Exclude memories from a specific agent
 
-**Routing Strategies** (all active in v0.5.2):
+**Routing Strategies** (all active in v0.5.4):
 - `auto` (default): SmartRouter classifies query and routes optimally
 - `semantic`: BGE-large semantic search
 - `fast_path`: Working memory only (<5ms)
@@ -966,7 +970,7 @@ curl http://localhost:6333/collections/memory-vectors
 
 ## 🎯 Design Philosophy
 
-**v0.5.2 Pragmatic Approach**:
+**v0.5.4 Pragmatic Approach**:
 - ✅ Simple solutions over complex architectures
 - ✅ Honest uncertainty over auto-resolved conflicts
 - ✅ Fast local operation (<1ms P95 latency)
