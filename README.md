@@ -68,7 +68,7 @@ Vesper has been scientifically validated with comprehensive benchmarks measuring
 | Benchmark | Purpose | Key Metric | Result |
 |-----------|---------|------------|--------|
 | **Accuracy** | Measures VALUE (answer quality) | F1 Score | **98.5%** 🎯 |
-| **Latency** | Measures COST (overhead) | P95 Latency | **0.4ms** ⚡ |
+| **Latency** | Measures COST (overhead) | P95 Latency | **0.6ms** ⚡ |
 
 ### Accuracy Benchmark Results ⭐
 
@@ -98,12 +98,12 @@ Vesper has been scientifically validated with comprehensive benchmarks measuring
 
 | Metric | Without Memory | With Vesper | Improvement |
 |--------|---------------|-------------|-------------|
-| **P50 Latency** | 4.5ms | 0.2ms | ✅ **95.6% faster** |
-| **P95 Latency** | 7.0ms | 0.4ms | ✅ **94.3% faster** |
-| **P99 Latency** | 7.5ms | 0.6ms | ✅ **92.0% faster** |
+| **P50 Latency** | 4.6ms | 0.4ms | ✅ **91.3% faster** |
+| **P95 Latency** | 6.9ms | 0.6ms | ✅ **91.3% faster** |
+| **P99 Latency** | 8.2ms | 1.2ms | ✅ **85.4% faster** |
 | **Memory Hit Rate** | 0% | 100% | ✅ **Perfect recall** |
 
-**What this means:** Vesper v0.4.0 provides perfect memory recall with exceptional performance. Lazy loading reduces token usage by 90%, while the LRU embedding cache eliminates redundant embedding generation. Working memory provides sub-millisecond fast path for recent queries. All latency targets exceeded: P95 of 0.4ms is **99.8% better** than the 200ms target.
+**What this means:** Vesper v0.5.2 provides perfect memory recall with SmartRouter intelligently routing queries across 6 specialized handlers. Lazy loading reduces token usage by 90%, while the LRU embedding cache eliminates redundant embedding generation. Working memory provides sub-millisecond fast path for recent queries. All latency targets exceeded: P95 of 0.6ms is **99.7% better** than the 200ms target.
 
 ### Benchmark Methodology
 
@@ -780,7 +780,7 @@ vesper/
 
 ## 🧪 Test Coverage
 
-**Overall**: 789/789 tests passing (100%)
+**Overall**: 936/936 tests passing (100%)
 
 | Category | Tests | Status |
 |----------|-------|--------|
@@ -791,6 +791,13 @@ vesper/
 | Conflict Detection | 19 | ✅ PASS |
 | Consolidation | 21 | ✅ PASS |
 | Working Memory | 14 | ✅ PASS |
+| Delete Memory | 18 | ✅ PASS |
+| **Multi-Agent (v0.5.0)** | | |
+| Namespace Isolation | 32 | ✅ PASS |
+| Agent Attribution | 20 | ✅ PASS |
+| Share Context | 25 | ✅ PASS |
+| Store Decision | 20 | ✅ PASS |
+| Namespace Tools | 15 | ✅ PASS |
 | **Scientific Benchmarks** | | |
 | Benchmark Statistics | 59 | ✅ PASS |
 | Benchmark Types | 32 | ✅ PASS |
@@ -804,7 +811,7 @@ vesper/
 | Lazy Loading | 42 | ✅ PASS |
 | Relational Embeddings | 38 | ✅ PASS |
 | Security Hardening | 27 | ✅ PASS |
-| **Integration & Other** | 249 | ✅ PASS |
+| **Integration & Other** | 185 | ✅ PASS |
 
 ### Running Tests
 
@@ -935,18 +942,18 @@ curl http://localhost:6333/collections/memory-vectors
 
 ## 🎯 Design Philosophy
 
-**v0.4.0 Pragmatic Approach**:
+**v0.5.2 Pragmatic Approach**:
 - ✅ Simple solutions over complex architectures
 - ✅ Honest uncertainty over auto-resolved conflicts
 - ✅ Fast local operation (<1ms P95 latency)
-- ✅ Comprehensive testing (789 tests, 100% coverage)
+- ✅ Comprehensive testing (936 tests, 100% coverage)
 
 **What makes this special**:
 - Three-layer memory architecture with lazy loading
 - Intelligent retrieval (semantic search + graph traversal + relational embeddings)
 - 90% token efficiency gain (50 tokens vs 500 per skill)
 - Word2Vec-inspired analogical reasoning
-- Sub-millisecond P95 latency (0.4ms)
+- Sub-millisecond P95 latency (0.6ms)
 - Simple local setup
 
 **What we're NOT building**:
