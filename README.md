@@ -258,6 +258,9 @@ npm install -g vesper-memory
 # Run the installer (installs to ~/.vesper)
 vesper install
 
+# Set up Claude Code rules for optimal memory usage
+vesper init
+
 # The installer will automatically:
 # 1. Clone/update Vesper to ~/.vesper
 # 2. Build TypeScript and install dependencies
@@ -292,6 +295,27 @@ docker-compose up -d redis qdrant embedding
 claude mcp add vesper --transport stdio --scope user -- node ~/.vesper/dist/server.js
 
 # 6. Restart Claude Code
+```
+
+### Claude Code Rules (Recommended)
+
+`vesper init` installs rule files to `~/.claude/rules/` that teach Claude how and when to use Vesper memory. This works on all platforms:
+
+```bash
+vesper init
+```
+
+**What gets installed:**
+- `vesper.md` - Tool documentation, storage guidelines, memory types, examples
+- `memory-discipline.md` - Proactive storage triggers and retrieval habits
+
+**Manual installation (any platform):**
+```bash
+# macOS / Linux / WSL
+cp node_modules/vesper-memory/config/claude-rules/*.md ~/.claude/rules/
+
+# Windows (PowerShell)
+Copy-Item node_modules\vesper-memory\config\claude-rules\*.md $HOME\.claude\rules\
 ```
 
 ### Development Setup (For Vesper Contributors)

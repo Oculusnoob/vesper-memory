@@ -669,6 +669,63 @@ function promptConfirm(question: string): Promise<boolean> {
   });
 }
 
+// Initialize Claude Code rules for optimal Vesper usage
+async function initRules() {
+  header('📋 Setting up Claude Code rules for Vesper');
+
+  const rulesDir = join(homedir(), '.claude', 'rules');
+  const packageRoot = join(__dirname, '..');
+  const sourceDir = join(packageRoot, 'config', 'claude-rules');
+
+  // Verify source rules exist
+  const ruleFiles = ['vesper.md', 'memory-discipline.md'];
+  for (const file of ruleFiles) {
+    if (!existsSync(join(sourceDir, file))) {
+      error(`Source rule file not found: ${join(sourceDir, file)}`);
+      error('This may indicate a broken installation. Try reinstalling vesper-memory.');
+      process.exit(1);
+    }
+  }
+
+  // Create ~/.claude/rules/ if missing
+  if (!existsSync(rulesDir)) {
+    info(`Creating ${rulesDir}...`);
+    mkdirSync(rulesDir, { recursive: true });
+  }
+
+  // Copy each rule file
+  let installed = 0;
+  for (const file of ruleFiles) {
+    const src = join(sourceDir, file);
+    const dest = join(rulesDir, file);
+
+    if (existsSync(dest)) {
+      const shouldOverwrite = await promptConfirm(`${file} already exists. Overwrite?`);
+      if (!shouldOverwrite) {
+        info(`Skipped ${file}`);
+        continue;
+      }
+    }
+
+    try {
+      copyFileSync(src, dest);
+      success(`Installed ${file}`);
+      installed++;
+    } catch (err) {
+      error(`Failed to copy ${file}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  if (installed > 0) {
+    log('');
+    success(`${installed} rule file(s) installed to ${rulesDir}`);
+    log('\n💡 Claude Code will now know how and when to use Vesper memory.');
+    log('   Rules take effect in new Claude Code sessions.\n');
+  } else {
+    info('No files were installed.');
+  }
+}
+
 // Migrate data from old locations to user-level storage
 async function migrate() {
   header('🚚 Migrating Vesper Data to User-Level Storage');
@@ -840,6 +897,13 @@ switch (command) {
     });
     break;
 
+  case 'init':
+    initRules().catch((err) => {
+      error(`Init failed: ${err.message}`);
+      process.exit(1);
+    });
+    break;
+
   case 'help':
   case '--help':
   case '-h':
@@ -852,6 +916,7 @@ ${colors.bright}USAGE:${colors.reset}
 
 ${colors.bright}COMMANDS:${colors.reset}
   install      Install Vesper and configure Claude Code (full setup)
+  init         Set up Claude Code rules for optimal memory usage
   configure    Configure MCP server only (no Docker setup)
   migrate      Migrate data from old location to user-level storage
   uninstall    Remove Vesper completely
@@ -862,6 +927,7 @@ ${colors.bright}COMMANDS:${colors.reset}
 
 ${colors.bright}EXAMPLES:${colors.reset}
   vesper install       # Full installation with Docker setup
+  vesper init          # Install Claude Code rules for Vesper
   vesper configure     # Configure MCP only (lightweight)
   vesper migrate       # Move data to ~/.vesper/data/
   vesper status        # Check if running

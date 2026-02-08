@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Performance**: <200ms P95 latency, 95%+ retrieval accuracy
 
-**Test Coverage**: 936/936 tests passing (100%)
+**Test Coverage**: 958/958 tests passing (100%)
 
 ---
 
@@ -32,7 +32,7 @@ npm run build:global
 # (Uses vesper-dev instance via local .claude/mcp_config.json)
 
 # Run tests
-npm test                    # 936 tests should pass
+npm test                    # 958 tests should pass
 
 # Run MCP server (development mode)
 npm run dev
@@ -210,7 +210,7 @@ npm run reinstall
 
 ```bash
 # Run all tests
-npm test                    # 936 tests
+npm test                    # 958 tests
 
 # Run specific test suites
 npm test tests/router.test.ts
@@ -287,7 +287,7 @@ LOG_LEVEL=info
 
 ## Test Architecture
 
-**Overall**: 936/936 tests passing (100%)
+**Overall**: 958/958 tests passing (100%)
 
 ### Test Coverage
 
@@ -339,7 +339,7 @@ LOG_LEVEL=info
 1. **Simple > Complex** - Pragmatic solutions over theoretical perfection
 2. **Honest > Smart** - Flag conflicts, never auto-resolve
 3. **Fast Local Operation** - <200ms P95 latency
-4. **Comprehensive Testing** - 936 tests, 100% coverage
+4. **Comprehensive Testing** - 958 tests, 100% coverage
 
 **What We Built**:
 - ✅ Three-layer memory architecture
