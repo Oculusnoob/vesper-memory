@@ -8,13 +8,31 @@ Simple, local memory system for Claude Code. No authentication, no complexity - 
 
 [![npm version](https://img.shields.io/npm/v/vesper-memory.svg)](https://www.npmjs.com/package/vesper-memory)
 [![npm downloads](https://img.shields.io/npm/dm/vesper-memory.svg)](https://www.npmjs.com/package/vesper-memory)
-[![Test Coverage](https://img.shields.io/badge/tests-909%2F909-brightgreen)](.)
+[![Test Coverage](https://img.shields.io/badge/tests-936%2F936-brightgreen)](.)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](.)
 [![License](https://img.shields.io/badge/license-MIT-blue)](.)
 
 ---
 
-## ✨ What's New in v0.5.0
+## ✨ What's New in v0.5.2
+
+**Delete Memory Tool**
+- New `delete_memory` MCP tool to remove stored memories by ID
+- Cleans up across all layers (SQLite, Qdrant, Redis) and orphaned facts
+- 14 MCP tools total
+
+**Smart Router Activated**
+- SmartRouter now wired into `retrieve_memory` as primary retrieval path
+- All 6 query type handlers fully implemented (was dead code)
+- Factual queries use entity lookup + HippoRAG PageRank
+- Temporal queries parse time ranges ("yesterday", "last week")
+- Project queries use HippoRAG graph traversal (depth=2)
+- Complex queries fall back to semantic search with RRF fusion
+
+**936 tests passing** (up from 909 in v0.5.0)
+
+<details>
+<summary>v0.5.0 Changes</summary>
 
 **Multi-Agent Namespace Isolation**
 - All memory operations support `namespace` parameter for multi-agent workflows
@@ -28,6 +46,7 @@ Simple, local memory system for Claude Code. No authentication, no complexity - 
 **Decision Memory Type**
 - New `memory_type: "decision"` with reduced temporal decay (4x slower)
 - Supersedes mechanism for evolving decisions
+</details>
 - Automatic conflict detection against existing decisions
 
 **4 New MCP Tools** (13 total)
@@ -36,7 +55,7 @@ Simple, local memory system for Claude Code. No authentication, no complexity - 
 - `list_namespaces`: Discover all namespaces with counts
 - `namespace_stats`: Per-namespace breakdown of memories, entities, agents
 
-**909 tests passing** (up from 632 in v0.4.0)
+**936 tests passing** (up from 632 in v0.4.0)
 
 ---
 
@@ -385,7 +404,7 @@ Entity    Prefs KG  HippoRAG  TimeRange Skills
 
 ## 🔧 MCP Tools
 
-Vesper provides 13 MCP tools for memory management. All tools accept an optional `namespace` parameter (default: `"default"`) for multi-agent isolation:
+Vesper provides 14 MCP tools for memory management. All tools accept an optional `namespace` parameter (default: `"default"`) for multi-agent isolation:
 
 ### Core Memory Tools
 
@@ -434,11 +453,12 @@ Query with smart routing and semantic search.
 - `task_id` (optional): Filter to memories from a specific task
 - `exclude_agent` (optional): Exclude memories from a specific agent
 
-**Routing Strategies**:
-- `semantic`: BGE-large semantic search (default)
-- `fast_path`: Working memory only (planned)
+**Routing Strategies** (all active in v0.5.2):
+- `auto` (default): SmartRouter classifies query and routes optimally
+- `semantic`: BGE-large semantic search
+- `fast_path`: Working memory only (<5ms)
 - `full_text`: SQLite full-text search (fallback)
-- `graph`: HippoRAG graph traversal (planned)
+- `graph`: HippoRAG graph traversal with PageRank
 
 **Response**:
 ```json
@@ -490,6 +510,22 @@ System metrics and health status.
   "health": "healthy"
 }
 ```
+
+### `delete_memory`
+Delete a memory by ID across all layers (SQLite, Qdrant, Redis).
+
+```json
+{
+  "memory_id": "550e8400-e29b-41d4-a716-446655440000",
+  "namespace": "default"
+}
+```
+
+**Behavior**:
+- Removes from SQLite, Qdrant vectors, and Redis working memory
+- Cleans up orphaned facts where `source_conversation = memory_id`
+- Returns deleted memory details for confirmation
+- Graceful degradation if Qdrant/Redis unavailable
 
 ### System Control Tools
 

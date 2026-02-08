@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Performance**: <200ms P95 latency, 95%+ retrieval accuracy
 
-**Test Coverage**: 909/909 tests passing (100%)
+**Test Coverage**: 936/936 tests passing (100%)
 
 ---
 
@@ -32,7 +32,7 @@ npm run build:global
 # (Uses vesper-dev instance via local .claude/mcp_config.json)
 
 # Run tests
-npm test                    # 909 tests should pass
+npm test                    # 936 tests should pass
 
 # Run MCP server (development mode)
 npm run dev
@@ -79,7 +79,7 @@ vesper migrate  # Automatic migration from old locations
 ```
 ┌─────────────────────────────────────────┐
 │  MCP Server (Node.js/TypeScript)        │
-│  - 13 MCP tools (namespace-aware)       │
+│  - 14 MCP tools (namespace-aware)       │
 │  - Smart query routing                  │
 │  - Local stdio transport                │
 └──────────────┬──────────────────────────┘
@@ -146,7 +146,7 @@ src/
 
 ## MCP Tools
 
-### 13 Tools Available
+### 14 Tools Available
 
 All tools accept an optional `namespace` parameter (default: `"default"`) for multi-agent isolation.
 
@@ -155,21 +155,22 @@ All tools accept an optional `namespace` parameter (default: `"default"`) for mu
 2. **retrieve_memory**: Query with smart routing and semantic search (supports `agent_id`, `task_id`, `exclude_agent` filters)
 3. **list_recent**: Get recent conversations from working memory
 4. **get_stats**: System metrics and health status
+5. **delete_memory**: Delete a memory by ID across all layers (SQLite, Qdrant, Redis)
 
 **Multi-Agent Tools** (v0.5.0):
-5. **share_context**: Copy memories between namespaces with handoff tracking
-6. **store_decision**: Store decisions with reduced temporal decay and conflict detection
-7. **list_namespaces**: Discover all namespaces with memory counts
-8. **namespace_stats**: Per-namespace breakdown of memories, entities, skills, agents
+6. **share_context**: Copy memories between namespaces with handoff tracking
+7. **store_decision**: Store decisions with reduced temporal decay and conflict detection
+8. **list_namespaces**: Discover all namespaces with memory counts
+9. **namespace_stats**: Per-namespace breakdown of memories, entities, skills, agents
 
 **System Control Tools**:
-9. **vesper_enable**: Enable memory system
-10. **vesper_disable**: Disable memory system (pass-through mode)
-11. **vesper_status**: Check system state
+10. **vesper_enable**: Enable memory system
+11. **vesper_disable**: Disable memory system (pass-through mode)
+12. **vesper_status**: Check system state
 
 **Skill Tools**:
-12. **load_skill**: Load full skill description on-demand
-13. **record_skill_outcome**: Track skill execution success/failure
+13. **load_skill**: Load full skill description on-demand
+14. **record_skill_outcome**: Track skill execution success/failure
 
 ### Query Routing
 
@@ -209,7 +210,7 @@ npm run reinstall
 
 ```bash
 # Run all tests
-npm test                    # 909 tests
+npm test                    # 936 tests
 
 # Run specific test suites
 npm test tests/router.test.ts
@@ -286,7 +287,7 @@ LOG_LEVEL=info
 
 ## Test Architecture
 
-**Overall**: 909/909 tests passing (100%)
+**Overall**: 936/936 tests passing (100%)
 
 ### Test Coverage
 

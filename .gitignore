@@ -108,6 +108,9 @@ articles/
 .claude/*.local.json
 logos/
 
+# Project management (session-specific)
+.pm/
+
 # Auto-generated benchmark results
 benchmarks/results.md
 benchmarks/scientific-results.md
